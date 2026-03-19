@@ -185,6 +185,17 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
 <body>
 <div class="tc" id="tc"></div>
 
+<!-- LOADING SCREEN — Firebase data aane tak dikhega -->
+<div id="app-loader" style="position:fixed;inset:0;background:linear-gradient(135deg,#1a3a6b,#1a5fc8);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+  <div style="font-size:48px">📦</div>
+  <div style="font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;color:#fff">MaalHisab Pro</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase">Data load ho raha hai...</div>
+  <div style="width:180px;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;overflow:hidden;margin-top:4px">
+    <div id="loader-bar" style="height:100%;width:0%;background:#fff;border-radius:2px;transition:width 0.4s ease;animation:ldbar 2s ease-in-out infinite"></div>
+  </div>
+  <style>@keyframes ldbar{0%{width:0%}50%{width:70%}100%{width:100%}}</style>
+</div>
+
 <div class="ov" id="main-modal" onclick="closeOut(event,'main-modal')">
   <div class="modal" id="modal-body"></div>
 </div>
@@ -319,36 +330,20 @@ function qtlToMt(qtl){ return Math.round((qtl||0)/MT_TO_QTL*1000)/1000; }
 function fmtQtl(qtl){ return (Math.round((qtl||0)*10)/10).toLocaleString('en-IN')+' Qtl'; }
 function fmtMT(mt){ return (Math.round((mt||0)*100)/100).toLocaleString('en-IN')+' MT'; }
 
-// ===== DATA =====
+// ===== DATA — Pehle empty, Firebase se load hoga =====
 var DATA={
-  saude:[
-    {id:'S001',no:'S-001',date:'2025-01-05',partyId:'P1',brokerId:'B1',qty:100,rate:2150,location:'Delhi',notes:'COD deal',oneTime:false},
-    {id:'S002',no:'S-002',date:'2025-01-08',partyId:'P2',brokerId:'B2',qty:50,rate:2200,location:'Mumbai',notes:'',oneTime:true},
-    {id:'S003',no:'S-003',date:'2025-01-10',partyId:'P3',brokerId:'B1',qty:80,rate:2100,location:'Chennai',notes:'Urgent',oneTime:false},
-    {id:'S004',no:'S-004',date:'2025-01-14',partyId:'P1',brokerId:'B3',qty:120,rate:2300,location:'Kolkata',notes:'',oneTime:false}
-  ],
-  dispatches:[
-    {id:'D001',saudaId:'S001',date:'2025-01-06',vehicle:'PB10AB1234',driver:'Mohan Lal',qtl:200,bags:400,gatepass:'GP-101',status:'pass',note:''},
-    {id:'D002',saudaId:'S001',date:'2025-01-08',vehicle:'PB08CD5678',driver:'Ramu Das',qtl:300,bags:600,gatepass:'GP-102',status:'pass',note:''},
-    {id:'D003',saudaId:'S001',date:'2025-01-10',vehicle:'HR26EF9012',driver:'Sohan',qtl:150,bags:300,gatepass:'GP-103',status:'reject',note:'Weight kam tha'},
-    {id:'D004',saudaId:'S002',date:'2025-01-09',vehicle:'DL01GH3456',driver:'Ramesh',qtl:500,bags:1000,gatepass:'GP-104',status:'pass',note:''},
-    {id:'D005',saudaId:'S003',date:'2025-01-11',vehicle:'PB10IJ7890',driver:'Suresh',qtl:400,bags:800,gatepass:'GP-105',status:'pass',note:''},
-    {id:'D006',saudaId:'S003',date:'2025-01-13',vehicle:'UP32KL1234',driver:'Mahesh',qtl:250,bags:500,gatepass:'GP-106',status:'pending',note:''},
-    {id:'D007',saudaId:'S004',date:'2025-01-15',vehicle:'PB10MN5678',driver:'Dinesh',qtl:600,bags:1200,gatepass:'GP-107',status:'pass',note:''},
-    {id:'D008',saudaId:'S004',date:'2025-01-19',vehicle:'PB12OP9012',driver:'Kamlesh',qtl:300,bags:600,gatepass:'GP-108',status:'pending',note:''}
-  ],
-  parties:[
-    {id:'P1',name:'Ram Traders',city:'Ludhiana',mobile:'9876543210',gst:'03AABCU9603R1ZP'},
-    {id:'P2',name:'Shyam Enterprises',city:'Jalandhar',mobile:'9812345678',gst:''},
-    {id:'P3',name:'Gopal Agro',city:'Amritsar',mobile:'9988776655',gst:'03BBBFU9613R1ZT'}
-  ],
-  brokers:[
-    {id:'B1',name:'Sandeep Kumar',mobile:'9871122334',city:'Ludhiana'},
-    {id:'B2',name:'Rajesh Sharma',mobile:'9811223344',city:'Jalandhar'},
-    {id:'B3',name:'Vikram Singh',mobile:'9800112233',city:'Patiala'}
-  ],
-  nS:5,nD:9,nP:4,nB:4
+  saude:[],
+  dispatches:[],
+  parties:[],
+  brokers:[],
+  nS:1,nD:1,nP:1,nB:1
 };
+function recalcCounters(){
+  DATA.saude.forEach(function(s){var n=parseInt((s.id||'').replace(/\D/g,''))||0;if(n>=DATA.nS)DATA.nS=n+1;});
+  DATA.dispatches.forEach(function(d){var n=parseInt((d.id||'').replace(/\D/g,''))||0;if(n>=DATA.nD)DATA.nD=n+1;});
+  DATA.parties.forEach(function(p){var n=parseInt((p.id||'').replace(/\D/g,''))||0;if(n>=DATA.nP)DATA.nP=n+1;});
+  DATA.brokers.forEach(function(b){var n=parseInt((b.id||'').replace(/\D/g,''))||0;if(n>=DATA.nB)DATA.nB=n+1;});
+}
 
 // ===== HELPERS =====
 var FC=['#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316','#06b6d4','#84cc16','#ef4444','#a855f7'];
@@ -1248,8 +1243,10 @@ function loadAllFromFB(callback){
       }
       loaded++;
       if(loaded === COLLECTIONS.length){
+        recalcCounters();
         saveToLocalStorage();
         setSyncStatus('ok');
+        hideLoader();
         if(callback) callback();
       }
     }).catch(function(e){
@@ -1257,7 +1254,9 @@ function loadAllFromFB(callback){
       loaded++;
       if(loaded === COLLECTIONS.length){
         loadFromLocalStorage();
+        recalcCounters();
         setSyncStatus('offline');
+        hideLoader();
         if(callback) callback();
       }
     });
@@ -1466,18 +1465,36 @@ updateBroker = function(bid){
 };
 
 // =====================================================
-// INIT — Load from Firebase, then render
+// HIDE LOADER
+// =====================================================
+function hideLoader(){
+  var el = document.getElementById('app-loader');
+  if(el){
+    el.style.transition = 'opacity 0.4s ease';
+    el.style.opacity = '0';
+    setTimeout(function(){ el.style.display='none'; }, 400);
+  }
+}
+
+// =====================================================
+// INIT — Sirf Firebase se load karo, pehle kuch render mat karo
 // =====================================================
 setSyncStatus('init');
-// First load local so app shows instantly, then sync from Firebase
-loadFromLocalStorage();
-renderDash();
-// Then fetch latest from Firebase
+// Agar Firebase 5 sec mein na aaye toh local se show karo (offline fallback)
+var loaderTimeout = setTimeout(function(){
+  loadFromLocalStorage();
+  recalcCounters();
+  hideLoader();
+  renderDash();
+  setSyncStatus('offline');
+  toast('Offline mode — local data dikh raha hai','e');
+}, 5000);
+
 initFB();
 loadAllFromFB(function(){
+  clearTimeout(loaderTimeout);
   renderDash();
   startRealtimeListeners();
-  toast('Firebase sync complete!','s');
 });
 </script>
 </body>
