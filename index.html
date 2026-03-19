@@ -257,7 +257,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <select class="fsel" id="sf-broker" onchange="renderSaude()"><option value="">Sab Brokers</option></select>
         <select class="fsel" id="sf-status" onchange="renderSaude()"><option value="">Sab Status</option><option value="complete">Complete</option><option value="partial">Partial</option><option value="pending">Pending</option></select>
-        <button class="btn btn-ghost" onclick="openImportModal()">📥 Bulk Import</button><button class="btn btn-blue" onclick="openNewSauda()">＋ Naya Sauda</button>
+        <button class="btn btn-blue" onclick="openNewSauda()">＋ Naya Sauda</button>
       </div>
     </div>
     <div class="jgrid" id="saude-grid"></div>
@@ -294,7 +294,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
   <div id="p-parties" class="hidden">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
       <div class="stl">👤 Party <span>Directory</span></div>
-      <button class="btn btn-ghost" onclick="openImportModal()" >📥 Import</button><button class="btn btn-blue" onclick="openNewParty()">＋ Naya Party</button>
+      <button class="btn btn-blue" onclick="openNewParty()">＋ Naya Party</button>
     </div>
     <div class="jgrid" id="parties-grid"></div>
   </div>
@@ -303,7 +303,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
   <div id="p-brokers" class="hidden">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
       <div class="stl">🤝 Broker <span>Management</span></div>
-      <button class="btn btn-ghost" onclick="openImportModal()">📥 Import</button><button class="btn btn-blue" onclick="openNewBroker()">＋ Naya Broker</button>
+      <button class="btn btn-blue" onclick="openNewBroker()">＋ Naya Broker</button>
     </div>
     <div class="jgrid" id="brokers-grid"></div>
   </div>
@@ -734,7 +734,7 @@ function saveNewDispatch(){
 function openNewSauda(){
   var pOpts=DATA.parties.map(function(p){return '<option value="'+p.id+'">'+p.name+' ('+p.city+')</option>';}).join('');
   var bOpts=DATA.brokers.map(function(b){return '<option value="'+b.id+'">'+b.name+'</option>';}).join('');
-  var no='AAF-'+DATA.nS;
+  var no='S-'+String(DATA.nS).padStart(3,'0');
   var h='<div class="mh"><div class="mt">📄 Naya Sauda Add Karo</div><button class="mx" onclick="closeModal()">✕</button></div>'
     +'<div class="mb">'
     +'<div class="sec-title">📋 Sauda Details</div>'
@@ -743,10 +743,8 @@ function openNewSauda(){
     +'<div class="fg2"><label class="flbl">Tarikh *</label><input type="date" class="finp" id="ns-date" value="'+todayDate()+'"></div>'
     +'</div>'
     +'<div class="fgrid">'
-    +'<div class="fg2"><label class="flbl">Party * <button type="button" onclick="quickAddParty()" style="margin-left:6px;padding:1px 7px;font-size:10px;background:var(--gbg);color:var(--green);border:1px solid var(--gb);border-radius:4px;cursor:pointer;font-weight:600">＋ Naya</button></label>'
-    +'<select class="finp" id="ns-party"><option value="">-- Party Select Karo --</option>'+pOpts+'</select></div>'
-    +'<div class="fg2"><label class="flbl">Broker * <button type="button" onclick="quickAddBroker()" style="margin-left:6px;padding:1px 7px;font-size:10px;background:var(--gbg);color:var(--green);border:1px solid var(--gb);border-radius:4px;cursor:pointer;font-weight:600">＋ Naya</button></label>'
-    +'<select class="finp" id="ns-broker"><option value="">-- Broker Select Karo --</option>'+bOpts+'</select></div>'
+    +'<div class="fg2"><label class="flbl">Party *</label><select class="finp" id="ns-party"><option value="">-- Party Select Karo --</option>'+pOpts+'</select></div>'
+    +'<div class="fg2"><label class="flbl">Broker *</label><select class="finp" id="ns-broker"><option value="">-- Broker Select Karo --</option>'+bOpts+'</select></div>'
     +'</div>'
     +'<div class="fgrid">'
     +'<div class="fg2"><label class="flbl">Quantity (MT) *</label><input type="number" class="finp" id="ns-qty" placeholder="e.g. 100" oninput="calcNSAmt()"></div>'
@@ -783,8 +781,8 @@ function saveSauda(){
   var pid=document.getElementById('ns-party').value,bid=document.getElementById('ns-broker').value;
   var qty=parseFloat(document.getElementById('ns-qty').value),rate=parseFloat(document.getElementById('ns-rate').value);
   if(!pid||!bid||!qty||!rate){toast('Party, Broker, Qty aur Rate zaroori hai!','e');return;}
-  var id='AAF'+DATA.nS;
-  DATA.saude.push({id:id,no:'AAF-'+DATA.nS,date:document.getElementById('ns-date').value,partyId:pid,brokerId:bid,qty:qty,rate:rate,location:document.getElementById('ns-loc').value,notes:document.getElementById('ns-notes').value,oneTime:document.getElementById('ns-onetime').checked});
+  var id='S'+String(DATA.nS).padStart(3,'0');
+  DATA.saude.push({id:id,no:'S-'+String(DATA.nS).padStart(3,'0'),date:document.getElementById('ns-date').value,partyId:pid,brokerId:bid,qty:qty,rate:rate,location:document.getElementById('ns-loc').value,notes:document.getElementById('ns-notes').value,oneTime:document.getElementById('ns-onetime').checked});
   DATA.nS++;closeModal();toast('Sauda save ho gaya!','s');fillBrokerFilter();renderSaude();updHeader();
 }
 function openEditSauda(sid){
@@ -1000,240 +998,6 @@ function updateBroker(bid){
   var name=document.getElementById('eb-name').value.trim();if(!name){toast('Name zaroori hai','e');return;}
   b.name=name;b.city=document.getElementById('eb-city').value;b.mobile=document.getElementById('eb-mob').value;
   closeModal();toast('Update ho gaya!','s');renderBrokers();
-}
-
-// ===== QUICK ADD PARTY (from sauda form) =====
-function quickAddParty(){
-  var cur={
-    pid:document.getElementById('ns-party')?document.getElementById('ns-party').value:'',
-    bid:document.getElementById('ns-broker')?document.getElementById('ns-broker').value:'',
-    qty:document.getElementById('ns-qty')?document.getElementById('ns-qty').value:'',
-    rate:document.getElementById('ns-rate')?document.getElementById('ns-rate').value:'',
-    loc:document.getElementById('ns-loc')?document.getElementById('ns-loc').value:'',
-    notes:document.getElementById('ns-notes')?document.getElementById('ns-notes').value:'',
-    date:document.getElementById('ns-date')?document.getElementById('ns-date').value:'',
-    ot:document.getElementById('ns-onetime')?document.getElementById('ns-onetime').checked:false
-  };
-  var h='<div class="mh"><div class="mt">👤 Naya Party — Quick Add</div><button class="mx" onclick="restoreSaudaForm('+JSON.stringify(cur).replace(/"/g,"'")+')">✕</button></div>'
-    +'<div class="mb">'
-    +'<div style="background:var(--bluebg);border:1px solid #c5d8f8;border-radius:6px;padding:8px 12px;font-size:12px;color:var(--blue2);margin-bottom:12px">Party add karo — sauda form wapas aayega automatically</div>'
-    +'<div class="fg2" style="margin-bottom:11px"><label class="flbl">Party Name *</label><input class="finp" id="qp-name" placeholder="e.g. Ram Traders" autofocus></div>'
-    +'<div class="fgrid"><div class="fg2"><label class="flbl">City</label><input class="finp" id="qp-city" placeholder="Ludhiana..."></div>'
-    +'<div class="fg2"><label class="flbl">Mobile</label><input class="finp" id="qp-mob" placeholder="98765-43210" type="tel"></div></div>'
-    +'<div class="fg2"><label class="flbl">GST (optional)</label><input class="finp" id="qp-gst" placeholder="03XXXXX..."></div>'
-    +'</div>'
-    +'<div class="mf"><button class="btn btn-ghost" onclick="restoreSaudaForm('+JSON.stringify(cur).replace(/"/g,"'")+')">← Wapas</button>'
-    +'<button class="btn btn-blue" onclick="saveQuickParty('+JSON.stringify(cur).replace(/"/g,"'")+')">💾 Party Save Karo</button></div>';
-  openModal(h);
-}
-function saveQuickParty(saved){
-  var name=document.getElementById('qp-name').value.trim();
-  if(!name){toast('Party name zaroori hai!','e');return;}
-  var pid='P'+DATA.nP;
-  var newP={id:pid,name:name,city:document.getElementById('qp-city').value,mobile:document.getElementById('qp-mob').value,gst:document.getElementById('qp-gst').value};
-  DATA.parties.push(newP);DATA.nP++;
-  fbSave('parties',pid,newP);
-  toast('Party add ho gayi! Sauda form wapas aa raha hai...','s');
-  saved.newPartyId=pid;
-  setTimeout(function(){restoreSaudaForm(saved);},300);
-}
-
-// ===== QUICK ADD BROKER (from sauda form) =====
-function quickAddBroker(){
-  var cur={
-    pid:document.getElementById('ns-party')?document.getElementById('ns-party').value:'',
-    bid:document.getElementById('ns-broker')?document.getElementById('ns-broker').value:'',
-    qty:document.getElementById('ns-qty')?document.getElementById('ns-qty').value:'',
-    rate:document.getElementById('ns-rate')?document.getElementById('ns-rate').value:'',
-    loc:document.getElementById('ns-loc')?document.getElementById('ns-loc').value:'',
-    notes:document.getElementById('ns-notes')?document.getElementById('ns-notes').value:'',
-    date:document.getElementById('ns-date')?document.getElementById('ns-date').value:'',
-    ot:document.getElementById('ns-onetime')?document.getElementById('ns-onetime').checked:false
-  };
-  var h='<div class="mh"><div class="mt">🤝 Naya Broker — Quick Add</div><button class="mx" onclick="restoreSaudaForm('+JSON.stringify(cur).replace(/"/g,"'")+')">✕</button></div>'
-    +'<div class="mb">'
-    +'<div style="background:var(--bluebg);border:1px solid #c5d8f8;border-radius:6px;padding:8px 12px;font-size:12px;color:var(--blue2);margin-bottom:12px">Broker add karo — sauda form wapas aayega automatically</div>'
-    +'<div class="fg2" style="margin-bottom:11px"><label class="flbl">Broker Name *</label><input class="finp" id="qb-name" placeholder="e.g. Sandeep Kumar" autofocus></div>'
-    +'<div class="fgrid"><div class="fg2"><label class="flbl">City</label><input class="finp" id="qb-city" placeholder="Ludhiana..."></div>'
-    +'<div class="fg2"><label class="flbl">Mobile</label><input class="finp" id="qb-mob" placeholder="98765-43210" type="tel"></div></div>'
-    +'</div>'
-    +'<div class="mf"><button class="btn btn-ghost" onclick="restoreSaudaForm('+JSON.stringify(cur).replace(/"/g,"'")+')">← Wapas</button>'
-    +'<button class="btn btn-blue" onclick="saveQuickBroker('+JSON.stringify(cur).replace(/"/g,"'")+')">💾 Broker Save Karo</button></div>';
-  openModal(h);
-}
-function saveQuickBroker(saved){
-  var name=document.getElementById('qb-name').value.trim();
-  if(!name){toast('Broker name zaroori hai!','e');return;}
-  var bid='B'+DATA.nB;
-  var newB={id:bid,name:name,city:document.getElementById('qb-city').value,mobile:document.getElementById('qb-mob').value};
-  DATA.brokers.push(newB);DATA.nB++;
-  fbSave('brokers',bid,newB);
-  toast('Broker add ho gaya! Sauda form wapas aa raha hai...','s');
-  saved.newBrokerId=bid;
-  setTimeout(function(){restoreSaudaForm(saved);},300);
-}
-
-// ===== RESTORE SAUDA FORM with saved values =====
-function restoreSaudaForm(saved){
-  openNewSauda();
-  setTimeout(function(){
-    if(saved.date&&document.getElementById('ns-date'))document.getElementById('ns-date').value=saved.date;
-    if(document.getElementById('ns-party')){
-      var pid=saved.newPartyId||saved.pid;
-      if(pid)document.getElementById('ns-party').value=pid;
-    }
-    if(document.getElementById('ns-broker')){
-      var bid=saved.newBrokerId||saved.bid;
-      if(bid)document.getElementById('ns-broker').value=bid;
-    }
-    if(saved.qty&&document.getElementById('ns-qty'))document.getElementById('ns-qty').value=saved.qty;
-    if(saved.rate&&document.getElementById('ns-rate'))document.getElementById('ns-rate').value=saved.rate;
-    if(saved.loc&&document.getElementById('ns-loc'))document.getElementById('ns-loc').value=saved.loc;
-    if(saved.notes&&document.getElementById('ns-notes'))document.getElementById('ns-notes').value=saved.notes;
-    if(saved.ot&&document.getElementById('ns-onetime'))document.getElementById('ns-onetime').checked=saved.ot;
-    calcNSAmt();
-  },100);
-}
-
-// ===== IMPORT MODAL =====
-function openImportModal(){
-  var h='<div class="mh"><div class="mt">📥 Bulk Import</div><button class="mx" onclick="closeModal()">✕</button></div>'
-    +'<div class="mb">'
-    // Tabs
-    +'<div style="display:flex;gap:2px;background:var(--s3);border-radius:7px;padding:3px;margin-bottom:14px">'
-    +'<button id="imp-tab-s" onclick="showImpTab('s')" style="flex:1;padding:6px;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;background:var(--blue);color:#fff">📄 Saude</button>'
-    +'<button id="imp-tab-p" onclick="showImpTab('p')" style="flex:1;padding:6px;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:var(--text3)">👤 Parties</button>'
-    +'<button id="imp-tab-b" onclick="showImpTab('b')" style="flex:1;padding:6px;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:var(--text3)">🤝 Brokers</button>'
-    +'</div>'
-    // Saude Tab
-    +'<div id="imp-s">'
-    +'<div style="background:var(--ybg);border:1px solid var(--yb);border-radius:7px;padding:10px 12px;font-size:11px;margin-bottom:10px;color:var(--yellow)">'
-    +'<strong>Format:</strong> Har line mein ek sauda — columns: <span class="mono">Party Name, Broker Name, Qty(MT), Rate, Location, Notes, OneTime(yes/no)</span><br>'
-    +'Party aur Broker pehle se add hone chahiye. Nahi hai toh naya ban jaayega automatically.</div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">Example:</div>'
-    +'<div class="mono" style="background:var(--s2);padding:8px;border-radius:5px;font-size:11px;margin-bottom:10px;color:var(--text2)">Ram Traders, Sandeep Kumar, 100, 2150, Delhi, COD deal, no<br>Shyam Enterprises, Rajesh Sharma, 50, 2200, Mumbai, , yes</div>'
-    +'<textarea class="finp" id="imp-s-txt" rows="8" placeholder="Yahan paste karo...&#10;Ram Traders, Sandeep Kumar, 100, 2150, Delhi, , no&#10;Gopal Agro, Vikram Singh, 80, 2100, Chennai, Urgent, no" style="font-family:monospace;font-size:12px;width:100%"></textarea>'
-    +'</div>'
-    // Parties Tab
-    +'<div id="imp-p" style="display:none">'
-    +'<div style="background:var(--ybg);border:1px solid var(--yb);border-radius:7px;padding:10px 12px;font-size:11px;margin-bottom:10px;color:var(--yellow)">'
-    +'<strong>Format:</strong> Har line mein ek party — <span class="mono">Party Name, City, Mobile, GST</span></div>'
-    +'<div class="mono" style="background:var(--s2);padding:8px;border-radius:5px;font-size:11px;margin-bottom:10px;color:var(--text2)">Ram Traders, Ludhiana, 9876543210, 03AABCU9603R1ZP<br>Shyam Enterprises, Jalandhar, 9812345678,</div>'
-    +'<textarea class="finp" id="imp-p-txt" rows="8" placeholder="Yahan paste karo...&#10;Ram Traders, Ludhiana, 9876543210,&#10;Shyam Enterprises, Jalandhar, 9812345678," style="font-family:monospace;font-size:12px;width:100%"></textarea>'
-    +'</div>'
-    // Brokers Tab
-    +'<div id="imp-b" style="display:none">'
-    +'<div style="background:var(--ybg);border:1px solid var(--yb);border-radius:7px;padding:10px 12px;font-size:11px;margin-bottom:10px;color:var(--yellow)">'
-    +'<strong>Format:</strong> Har line mein ek broker — <span class="mono">Broker Name, City, Mobile</span></div>'
-    +'<div class="mono" style="background:var(--s2);padding:8px;border-radius:5px;font-size:11px;margin-bottom:10px;color:var(--text2)">Sandeep Kumar, Ludhiana, 9871122334<br>Rajesh Sharma, Jalandhar, 9811223344</div>'
-    +'<textarea class="finp" id="imp-b-txt" rows="8" placeholder="Yahan paste karo...&#10;Sandeep Kumar, Ludhiana, 9871122334&#10;Rajesh Sharma, Jalandhar, 9811223344" style="font-family:monospace;font-size:12px;width:100%"></textarea>'
-    +'</div>'
-    +'<div id="imp-result" style="margin-top:10px"></div>'
-    +'</div>'
-    +'<div class="mf"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button>'
-    +'<button class="btn btn-blue" onclick="doImport()">📥 Import Karo</button></div>';
-  openModal(h);
-}
-
-function showImpTab(t){
-  ['s','p','b'].forEach(function(x){
-    document.getElementById('imp-'+x).style.display=x===t?'block':'none';
-    var btn=document.getElementById('imp-tab-'+x);
-    btn.style.background=x===t?'var(--blue)':'transparent';
-    btn.style.color=x===t?'#fff':'var(--text3)';
-  });
-}
-
-function parseCsvLine(line){
-  return line.split(',').map(function(s){return s.trim();});
-}
-
-function doImport(){
-  var activeTab='s';
-  if(document.getElementById('imp-p').style.display!=='none')activeTab='p';
-  if(document.getElementById('imp-b').style.display!=='none')activeTab='b';
-
-  var results={added:0,skipped:0,errors:[]};
-
-  if(activeTab==='p'){
-    var txt=document.getElementById('imp-p-txt').value.trim();
-    if(!txt){toast('Kuch paste karo pehle!','e');return;}
-    txt.split('\n').forEach(function(line,i){
-      line=line.trim();if(!line)return;
-      var cols=parseCsvLine(line);
-      var name=(cols[0]||'').trim();
-      if(!name){results.errors.push('Line '+(i+1)+': Name missing');return;}
-      var exists=DATA.parties.find(function(p){return p.name.toLowerCase()===name.toLowerCase();});
-      if(exists){results.skipped++;return;}
-      var pid='P'+DATA.nP;
-      var newP={id:pid,name:name,city:(cols[1]||'').trim(),mobile:(cols[2]||'').trim(),gst:(cols[3]||'').trim()};
-      DATA.parties.push(newP);DATA.nP++;
-      fbSave('parties',pid,newP);
-      results.added++;
-    });
-    renderParties();updHeader();
-  } else if(activeTab==='b'){
-    var txt=document.getElementById('imp-b-txt').value.trim();
-    if(!txt){toast('Kuch paste karo pehle!','e');return;}
-    txt.split('\n').forEach(function(line,i){
-      line=line.trim();if(!line)return;
-      var cols=parseCsvLine(line);
-      var name=(cols[0]||'').trim();
-      if(!name){results.errors.push('Line '+(i+1)+': Name missing');return;}
-      var exists=DATA.brokers.find(function(b){return b.name.toLowerCase()===name.toLowerCase();});
-      if(exists){results.skipped++;return;}
-      var bid='B'+DATA.nB;
-      var newB={id:bid,name:name,city:(cols[1]||'').trim(),mobile:(cols[2]||'').trim()};
-      DATA.brokers.push(newB);DATA.nB++;
-      fbSave('brokers',bid,newB);
-      results.added++;
-    });
-    renderBrokers();updHeader();
-  } else {
-    // Saude import
-    var txt=document.getElementById('imp-s-txt').value.trim();
-    if(!txt){toast('Kuch paste karo pehle!','e');return;}
-    var today=todayDate();
-    txt.split('\n').forEach(function(line,i){
-      line=line.trim();if(!line)return;
-      var cols=parseCsvLine(line);
-      var pName=(cols[0]||'').trim();
-      var bName=(cols[1]||'').trim();
-      var qty=parseFloat(cols[2])||0;
-      var rate=parseFloat(cols[3])||0;
-      if(!pName||!bName||!qty||!rate){results.errors.push('Line '+(i+1)+': Party, Broker, Qty, Rate zaroori hain');return;}
-      // Find or create party
-      var party=DATA.parties.find(function(p){return p.name.toLowerCase()===pName.toLowerCase();});
-      if(!party){
-        var pid='P'+DATA.nP;
-        party={id:pid,name:pName,city:'',mobile:'',gst:''};
-        DATA.parties.push(party);DATA.nP++;
-        fbSave('parties',pid,party);
-      }
-      // Find or create broker
-      var broker=DATA.brokers.find(function(b){return b.name.toLowerCase()===bName.toLowerCase();});
-      if(!broker){
-        var bid='B'+DATA.nB;
-        broker={id:bid,name:bName,city:'',mobile:''};
-        DATA.brokers.push(broker);DATA.nB++;
-        fbSave('brokers',bid,broker);
-      }
-      var sid='AAF'+DATA.nS;
-      var newS={id:sid,no:'AAF-'+DATA.nS,date:today,partyId:party.id,brokerId:broker.id,qty:qty,rate:rate,location:(cols[4]||'').trim(),notes:(cols[5]||'').trim(),oneTime:(cols[6]||'').trim().toLowerCase()==='yes'};
-      DATA.saude.push(newS);DATA.nS++;
-      fbSave('saude',sid,newS);
-      results.added++;
-    });
-    fillBrokerFilter();renderSaude();updHeader();
-  }
-
-  var resHtml='<div style="background:'+(results.errors.length?'var(--rbg)':'var(--gbg)')+';border:1px solid '+(results.errors.length?'var(--rb)':'var(--gb)')+';border-radius:7px;padding:10px 12px;font-size:12px">'
-    +'<strong>'+(results.errors.length===0?'✅':'⚠️')+' Import Complete!</strong><br>'
-    +'✓ Added: <strong>'+results.added+'</strong> &nbsp;|&nbsp; Skipped (already exists): '+results.skipped
-    +(results.errors.length?'<br><span style="color:var(--red)">Errors: '+results.errors.join(', ')+'</span>':'')
-    +'</div>';
-  document.getElementById('imp-result').innerHTML=resHtml;
-  if(results.added>0) toast(results.added+' records import ho gaye!','s');
 }
 
 // ===== REPORTS =====
