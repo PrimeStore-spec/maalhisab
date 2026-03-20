@@ -5,7 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>📦 MaalHisab Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<!-- Firebase config - scripts load dynamically -->
+<!-- =====================================================
+     FIREBASE CONFIG — APNI CONFIG YAHAN PASTE KARO
+     Firebase Console > Project Settings > Your Apps > SDK setup
+     ===================================================== -->
+<script>
+var FB_CONFIG = {
+  apiKey:            "AIzaSyBhvCmZLVSOKflr7Ub_Vjhw_1CBlV2PaAI",
+  authDomain:        "primecoldstore-439ab.firebaseapp.com",
+  databaseURL:       "https://primecoldstore-439ab-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "primecoldstore-439ab",
+  storageBucket:     "primecoldstore-439ab.firebasestorage.app",
+  messagingSenderId: "848383603685",
+  appId:             "1:848383603685:web:7c9b45a123aa25e153f50c"
+};
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
 :root{
   --bg:#f0f2f5;--surface:#fff;--s2:#f7f8fa;--s3:#eef0f4;
@@ -183,6 +201,14 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
     <div class="hdr-stat"><div class="v" id="h-pending">0 Qtl</div><div class="l">Pending</div></div>
     <div class="hdr-stat"><div class="v" id="h-parties">0</div><div class="l">Parties</div></div>
     <div id="sync-status" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:4px 10px;font-size:11px;white-space:nowrap"><span style="color:rgba(255,255,255,0.5)">⟳ Connect ho raha...</span></div>
+    <div id="auth-ui" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost" id="btn-login" onclick="openLoginModal()">🔐 Login</button>
+      <button class="btn btn-red2" id="btn-logout" onclick="signOutUser()" style="display:none">Logout</button>
+      <div id="auth-pill" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:4px 10px;font-size:11px;white-space:nowrap">
+        <span style="color:rgba(255,255,255,0.6)">Role: Guest</span>
+      </div>
+    </div>
+    <button class="btn btn-ghost" id="btn-undo" style="display:none" onclick="undoLastAction()">↩ Undo</button>
     <button class="btn-add" onclick="goTab('saude');openNewSauda()">＋ Naya Sauda</button>
   </div>
 </header>
@@ -230,7 +256,13 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <select class="fsel" id="sf-broker" onchange="renderSaude()"><option value="">Sab Brokers</option></select>
         <select class="fsel" id="sf-status" onchange="renderSaude()"><option value="">Sab Status</option><option value="complete">Complete</option><option value="partial">Partial</option><option value="pending">Pending</option></select>
-        <button class="btn btn-ghost" onclick="openImportModal()">📥 Bulk Import</button>
+        <input class="fi" id="sf-q" placeholder="Search: Sauda/Party/Loc/Note" oninput="renderSaude()" style="min-width:220px">
+        <input type="date" class="fi" id="sf-from" onchange="renderSaude()" style="min-width:150px">
+        <input type="date" class="fi" id="sf-to" onchange="renderSaude()" style="min-width:150px">
+        <label style="display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;cursor:pointer">
+          <input type="checkbox" id="sf-exact" onchange="renderSaude()" style="width:16px;height:16px;accent-color:var(--blue);margin:0">
+          <span style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:1px">Exact</span>
+        </label>
         <button class="btn btn-blue" onclick="openNewSauda()">＋ Naya Sauda</button>
       </div>
     </div>
@@ -246,12 +278,13 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
         <div class="fg-s"><span class="fl">Sauda</span><select class="fsel" id="df-sauda" onchange="renderDispatch()"><option value="">Sab Saude</option></select></div>
         <div class="fg-s"><span class="fl">Broker</span><select class="fsel" id="df-broker" onchange="renderDispatch()"><option value="">Sab Brokers</option></select></div>
         <div class="fg-s"><span class="fl">Status</span><select class="fsel" id="df-status" onchange="renderDispatch()"><option value="">Sab</option><option value="pending">Pending</option><option value="pass">Pass</option><option value="reject">Reject</option></select></div>
+        <div class="fg-s"><span class="fl">Exact</span><input type="checkbox" id="df-exact" onchange="renderDispatch()" style="width:18px;height:18px;accent-color:var(--blue)"></div>
         <div class="fg-s"><span class="fl">Tarikh Se</span><input type="date" class="fi" id="df-from" onchange="renderDispatch()"></div>
         <div class="fg-s"><span class="fl">Tarikh Tak</span><input type="date" class="fi" id="df-to" onchange="renderDispatch()"></div>
         <button class="btn btn-ghost" onclick="clrDF()">✕ Clear</button>
-        <button class="btn btn-ghost" onclick="openMultiDispatch()">＋＋ Multi Dispatch</button>
         <button class="btn btn-green" onclick="openNewDispatch()">＋ Dispatch Add</button>
         <button class="btn btn-purple" onclick="openExportModal()">📥 Export</button>
+        <button class="btn btn-ghost" onclick="openImportModal()">📥 Import CSV</button>
       </div>
     </div>
     <div class="tw">
@@ -269,10 +302,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
   <div id="p-parties" class="hidden">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
       <div class="stl">👤 Party <span>Directory</span></div>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-ghost" onclick="openImportModal()">📥 Import</button>
-        <button class="btn btn-blue" onclick="openNewParty()">＋ Naya Party</button>
-      </div>
+      <button class="btn btn-blue" onclick="openNewParty()">＋ Naya Party</button>
     </div>
     <div class="jgrid" id="parties-grid"></div>
   </div>
@@ -281,10 +311,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
   <div id="p-brokers" class="hidden">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
       <div class="stl">🤝 Broker <span>Management</span></div>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-ghost" onclick="openImportModal()">📥 Import</button>
-        <button class="btn btn-blue" onclick="openNewBroker()">＋ Naya Broker</button>
-      </div>
+      <button class="btn btn-blue" onclick="openNewBroker()">＋ Naya Broker</button>
     </div>
     <div class="jgrid" id="brokers-grid"></div>
   </div>
@@ -297,6 +324,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
       <button class="btn btn-ghost" onclick="genReport('party')">👤 Party-wise</button>
       <button class="btn btn-ghost" onclick="genReport('broker')">🤝 Broker-wise</button>
       <button class="btn btn-ghost" onclick="genReport('pending')">⏳ Pending Only</button>
+      <button class="btn btn-ghost" onclick="openAuditModal()">📜 Audit Log</button>
       <button class="btn btn-purple" onclick="openExportModal()">📥 Export Excel/PDF</button>
     </div>
     <div id="report-out"><div class="empty"><div class="ei">📊</div><h3>Report select karo upar se</h3></div></div>
@@ -311,20 +339,36 @@ function qtlToMt(qtl){ return Math.round((qtl||0)/MT_TO_QTL*1000)/1000; }
 function fmtQtl(qtl){ return (Math.round((qtl||0)*10)/10).toLocaleString('en-IN')+' Qtl'; }
 function fmtMT(mt){ return (Math.round((mt||0)*100)/100).toLocaleString('en-IN')+' MT'; }
 
-// ===== DATA — Pehle empty, Firebase se load hoga =====
+// ===== DATA =====
 var DATA={
-  saude:[],
-  dispatches:[],
-  parties:[],
-  brokers:[],
-  nS:1,nD:1,nP:1,nB:1
+  saude:[
+    {id:'S001',no:'S-001',date:'2025-01-05',partyId:'P1',brokerId:'B1',qty:100,rate:2150,location:'Delhi',notes:'COD deal',oneTime:false},
+    {id:'S002',no:'S-002',date:'2025-01-08',partyId:'P2',brokerId:'B2',qty:50,rate:2200,location:'Mumbai',notes:'',oneTime:true},
+    {id:'S003',no:'S-003',date:'2025-01-10',partyId:'P3',brokerId:'B1',qty:80,rate:2100,location:'Chennai',notes:'Urgent',oneTime:false},
+    {id:'S004',no:'S-004',date:'2025-01-14',partyId:'P1',brokerId:'B3',qty:120,rate:2300,location:'Kolkata',notes:'',oneTime:false}
+  ],
+  dispatches:[
+    {id:'D001',saudaId:'S001',date:'2025-01-06',vehicle:'PB10AB1234',driver:'Mohan Lal',qtl:200,bags:400,gatepass:'GP-101',status:'pass',note:''},
+    {id:'D002',saudaId:'S001',date:'2025-01-08',vehicle:'PB08CD5678',driver:'Ramu Das',qtl:300,bags:600,gatepass:'GP-102',status:'pass',note:''},
+    {id:'D003',saudaId:'S001',date:'2025-01-10',vehicle:'HR26EF9012',driver:'Sohan',qtl:150,bags:300,gatepass:'GP-103',status:'reject',note:'Weight kam tha'},
+    {id:'D004',saudaId:'S002',date:'2025-01-09',vehicle:'DL01GH3456',driver:'Ramesh',qtl:500,bags:1000,gatepass:'GP-104',status:'pass',note:''},
+    {id:'D005',saudaId:'S003',date:'2025-01-11',vehicle:'PB10IJ7890',driver:'Suresh',qtl:400,bags:800,gatepass:'GP-105',status:'pass',note:''},
+    {id:'D006',saudaId:'S003',date:'2025-01-13',vehicle:'UP32KL1234',driver:'Mahesh',qtl:250,bags:500,gatepass:'GP-106',status:'pending',note:''},
+    {id:'D007',saudaId:'S004',date:'2025-01-15',vehicle:'PB10MN5678',driver:'Dinesh',qtl:600,bags:1200,gatepass:'GP-107',status:'pass',note:''},
+    {id:'D008',saudaId:'S004',date:'2025-01-19',vehicle:'PB12OP9012',driver:'Kamlesh',qtl:300,bags:600,gatepass:'GP-108',status:'pending',note:''}
+  ],
+  parties:[
+    {id:'P1',name:'Ram Traders',city:'Ludhiana',mobile:'9876543210',gst:'03AABCU9603R1ZP'},
+    {id:'P2',name:'Shyam Enterprises',city:'Jalandhar',mobile:'9812345678',gst:''},
+    {id:'P3',name:'Gopal Agro',city:'Amritsar',mobile:'9988776655',gst:'03BBBFU9613R1ZT'}
+  ],
+  brokers:[
+    {id:'B1',name:'Sandeep Kumar',mobile:'9871122334',city:'Ludhiana'},
+    {id:'B2',name:'Rajesh Sharma',mobile:'9811223344',city:'Jalandhar'},
+    {id:'B3',name:'Vikram Singh',mobile:'9800112233',city:'Patiala'}
+  ],
+  nS:5,nD:9,nP:4,nB:4
 };
-function recalcCounters(){
-  DATA.saude.forEach(function(s){var n=parseInt((s.id||'').replace(/\D/g,''))||0;if(n>=DATA.nS)DATA.nS=n+1;});
-  DATA.dispatches.forEach(function(d){var n=parseInt((d.id||'').replace(/\D/g,''))||0;if(n>=DATA.nD)DATA.nD=n+1;});
-  DATA.parties.forEach(function(p){var n=parseInt((p.id||'').replace(/\D/g,''))||0;if(n>=DATA.nP)DATA.nP=n+1;});
-  DATA.brokers.forEach(function(b){var n=parseInt((b.id||'').replace(/\D/g,''))||0;if(n>=DATA.nB)DATA.nB=n+1;});
-}
 
 // ===== HELPERS =====
 var FC=['#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316','#06b6d4','#84cc16','#ef4444','#a855f7'];
@@ -657,7 +701,7 @@ function saveDispatchFor(sid){
   var balQ=pendingQtl(sid);
   if(!veh||!qtl){toast('Vehicle No aur Quintal zaroori hai','e');return;}
   if(qtl>balQ+0.01){toast('Sirf '+fmtD(balQ)+' Qtl pending hai!','e');return;}
-  var id='D'+String(DATA.nD).padStart(3,'0');
+  var id=genSafeId('D', DATA.nD);
   DATA.dispatches.push({id:id,saudaId:sid,date:document.getElementById('df-date').value,vehicle:veh,driver:document.getElementById('df-drv').value,qtl:qtl,bags:parseInt(document.getElementById('df-bags').value)||0,gatepass:document.getElementById('df-gp').value,status:'pending',note:document.getElementById('df-note').value});
   DATA.nD++;
   toast('Dispatch save ho gaya! Status: Pending','s');openSaudaDetail(sid);updHeader();
@@ -705,7 +749,7 @@ function saveNewDispatch(){
   if(!sid||!veh||!qtl){toast('Sauda, Vehicle aur Quintal zaroori hai','e');return;}
   var balQ=pendingQtl(sid);
   if(qtl>balQ+0.01){toast('Sirf '+fmtD(balQ)+' Qtl pending hai!','e');return;}
-  var id='D'+String(DATA.nD).padStart(3,'0');
+  var id=genSafeId('D', DATA.nD);
   DATA.dispatches.push({id:id,saudaId:sid,date:document.getElementById('nd-date').value,vehicle:veh,driver:document.getElementById('nd-drv').value,qtl:qtl,bags:parseInt(document.getElementById('nd-bags').value)||0,gatepass:document.getElementById('nd-gp').value,status:'pending',note:document.getElementById('nd-note').value});
   DATA.nD++;
   closeModal();toast('Dispatch save ho gaya!','s');renderDispatch();updHeader();
@@ -724,8 +768,8 @@ function openNewSauda(){
     +'<div class="fg2"><label class="flbl">Tarikh *</label><input type="date" class="finp" id="ns-date" value="'+todayDate()+'"></div>'
     +'</div>'
     +'<div class="fgrid">'
-    +'<div class="fg2"><label class="flbl">Party * <button type="button" onclick="qaParty()" style="margin-left:6px;padding:1px 8px;font-size:10px;background:var(--gbg);color:var(--green);border:1px solid var(--gb);border-radius:4px;cursor:pointer;font-weight:600">＋ Naya</button></label><select class="finp" id="ns-party"><option value="">-- Party Select Karo --</option>'+pOpts+'</select></div>'
-    +'<div class="fg2"><label class="flbl">Broker * <button type="button" onclick="qaBroker()" style="margin-left:6px;padding:1px 8px;font-size:10px;background:var(--gbg);color:var(--green);border:1px solid var(--gb);border-radius:4px;cursor:pointer;font-weight:600">＋ Naya</button></label><select class="finp" id="ns-broker"><option value="">-- Broker Select Karo --</option>'+bOpts+'</select></div>'
+    +'<div class="fg2"><label class="flbl">Party *</label><select class="finp" id="ns-party"><option value="">-- Party Select Karo --</option>'+pOpts+'</select></div>'
+    +'<div class="fg2"><label class="flbl">Broker *</label><select class="finp" id="ns-broker"><option value="">-- Broker Select Karo --</option>'+bOpts+'</select></div>'
     +'</div>'
     +'<div class="fgrid">'
     +'<div class="fg2"><label class="flbl">Quantity (MT) *</label><input type="number" class="finp" id="ns-qty" placeholder="e.g. 100" oninput="calcNSAmt()"></div>'
@@ -762,7 +806,7 @@ function saveSauda(){
   var pid=document.getElementById('ns-party').value,bid=document.getElementById('ns-broker').value;
   var qty=parseFloat(document.getElementById('ns-qty').value),rate=parseFloat(document.getElementById('ns-rate').value);
   if(!pid||!bid||!qty||!rate){toast('Party, Broker, Qty aur Rate zaroori hai!','e');return;}
-  var id='S'+String(DATA.nS).padStart(3,'0');
+  var id=genSafeId('S', DATA.nS);
   DATA.saude.push({id:id,no:'S-'+String(DATA.nS).padStart(3,'0'),date:document.getElementById('ns-date').value,partyId:pid,brokerId:bid,qty:qty,rate:rate,location:document.getElementById('ns-loc').value,notes:document.getElementById('ns-notes').value,oneTime:document.getElementById('ns-onetime').checked});
   DATA.nS++;closeModal();toast('Sauda save ho gaya!','s');fillBrokerFilter();renderSaude();updHeader();
 }
@@ -819,9 +863,24 @@ function fillBrokerFilter(){
 }
 function renderSaude(){
   var bF=document.getElementById('sf-broker').value,sF=document.getElementById('sf-status').value;
+  var q=(document.getElementById('sf-q').value||'').trim().toLowerCase();
+  var fromF=document.getElementById('sf-from').value,toF=document.getElementById('sf-to').value;
+  var exact=!!document.getElementById('sf-exact').checked;
   var list=DATA.saude.filter(function(s){
     if(bF&&s.brokerId!==bF)return false;
     if(sF&&saudaStatus(s.id).lbl.toLowerCase()!==sF)return false;
+    if(fromF&&s.date<fromF)return false;
+    if(toF&&s.date>toF)return false;
+    if(q){
+      var p=getParty(s.partyId).name||'';
+      var b=getBroker(s.brokerId).name||'';
+      var fields=[s.no,p,b,s.location||'',s.notes||''].map(function(x){return String(x).toLowerCase();});
+      if(exact){
+        if(!fields.some(function(x){return x===q;})) return false;
+      }else{
+        if(fields.join(' ').indexOf(q)===-1) return false;
+      }
+    }
     return true;
   });
   document.getElementById('saude-grid').innerHTML=list.map(buildSaudaCard).join('')||'<div class="empty"><div class="ei">📄</div><h3>Koi sauda nahi</h3></div>';
@@ -843,6 +902,8 @@ function renderDispatch(){
   var saudaF=document.getElementById('df-sauda').value,statusF=document.getElementById('df-status').value;
   var brokerF=document.getElementById('df-broker').value;
   var fromF=document.getElementById('df-from').value,toF=document.getElementById('df-to').value;
+  var exact=!!document.getElementById('df-exact').checked;
+  search=search.trim();
   var list=DATA.dispatches.filter(function(d){
     if(saudaF&&d.saudaId!==saudaF)return false;
     if(statusF&&d.status!==statusF)return false;
@@ -850,7 +911,17 @@ function renderDispatch(){
     if(toF&&d.date>toF)return false;
     var s=getSauda(d.saudaId);
     if(brokerF&&s&&s.brokerId!==brokerF)return false;
-    if(search){var hay=(d.vehicle+' '+(s?getParty(s.partyId).name:'')+(s?s.no:'')+' '+d.driver+' '+d.gatepass).toLowerCase();if(!hay.includes(search))return false;}
+    if(search){
+      var p=s?getParty(s.partyId).name:'';
+      var b=s?getBroker(s.brokerId).name:'';
+      var fields=[d.vehicle,d.driver,d.gatepass,(s?s.no:''),p,b].map(function(x){return String(x||'').toLowerCase().trim();});
+      if(exact){
+        if(!fields.some(function(x){return x===search;})) return false;
+      }else{
+        var hay=fields.join(' ');
+        if(hay.indexOf(search)===-1) return false;
+      }
+    }
     return true;
   }).sort(function(a,b){return b.id.localeCompare(a.id);});
   document.getElementById('disp-cnt').textContent=list.length;
@@ -875,7 +946,12 @@ function renderDispatch(){
   }).join('');
   document.getElementById('disp-tbody').innerHTML=html||'<tr><td colspan="13" class="empty" style="padding:24px">Koi dispatch nahi mila</td></tr>';
 }
-function clrDF(){['df-s','df-from','df-to'].forEach(function(i){document.getElementById(i).value='';});['df-sauda','df-status','df-broker'].forEach(function(i){document.getElementById(i).value='';});renderDispatch();}
+function clrDF(){
+  ['df-s','df-from','df-to'].forEach(function(i){document.getElementById(i).value='';});
+  ['df-sauda','df-status','df-broker'].forEach(function(i){document.getElementById(i).value='';});
+  var ex=document.getElementById('df-exact'); if(ex) ex.checked=false;
+  renderDispatch();
+}
 function qPass(did){DATA.dispatches.forEach(function(d){if(d.id===did)d.status='pass';});toast('✓ Pass ho gaya!','s');renderDispatch();updHeader();}
 function qRej(did){
   var note=prompt('Reject ki wajah:');if(note===null)return;
@@ -896,7 +972,8 @@ function renderParties(){
       +'<div class="jstats"><div class="jst"><div class="jsv">'+ps.length+'</div><div class="jsl">Saude</div></div>'
       +'<div class="jst"><div class="jsv" style="color:var(--orange)">'+fmtD(totPend)+' Qtl</div><div class="jsl">Pending</div></div>'
       +'<div class="jst"><div class="jsv" style="color:var(--blue);font-size:12px">₹'+fmt(totAmt)+'</div><div class="jsl">Total Value</div></div></div>'
-      +'<button class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:11px" onclick="openEditParty(\''+p.id+'\')">✏ Edit</button></div>';
+      +'<button class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:11px" onclick="openEditParty(\''+p.id+'\')">✏ Edit</button>'
+      +'<button class="btn btn-red2" style="width:100%;margin-top:8px;font-size:11px" onclick="delParty(\''+p.id+'\')">🗑 Delete</button></div>';
   }).join('');
   document.getElementById('parties-grid').innerHTML=html||'<div class="empty"><div class="ei">👤</div><h3>Koi party nahi</h3></div>';
 }
@@ -913,7 +990,7 @@ function openNewParty(){
 function saveNewParty(){
   var name=document.getElementById('np-name').value.trim();
   if(!name){toast('Party name zaroori hai!','e');return;}
-  DATA.parties.push({id:'P'+DATA.nP,name:name,city:document.getElementById('np-city').value,mobile:document.getElementById('np-mob').value,gst:document.getElementById('np-gst').value});
+  DATA.parties.push({id:genSafeId('P', DATA.nP),name:name,city:document.getElementById('np-city').value,mobile:document.getElementById('np-mob').value,gst:document.getElementById('np-gst').value});
   DATA.nP++;closeModal();toast('Party add ho gayi!','s');renderParties();updHeader();
 }
 function openEditParty(pid){
@@ -934,6 +1011,40 @@ function updateParty(pid){
   closeModal();toast('Update ho gaya!','s');renderParties();
 }
 
+function delParty(pid){
+  if(!requireAdmin()) return;
+  var p = DATA.parties.find(function(x){return x.id===pid;});
+  if(!p){ toast('Party not found','e'); return; }
+  if(!confirm('Party delete karna chahte ho? Related Saude/Dispatches bhi delete ho jayenge.')) return;
+
+  var beforeParty = deepClone(p);
+  var relatedSaudes = DATA.saude.filter(function(s){ return s.partyId===pid; });
+  var beforeSaudes = deepClone(relatedSaudes);
+  var saudaIdSet = relatedSaudes.reduce(function(m,s){ m[s.id]=true; return m; }, {});
+  var beforeDisps = deepClone(DATA.dispatches.filter(function(d){ return !!saudaIdSet[d.saudaId]; }));
+
+  // Local delete
+  DATA.parties = DATA.parties.filter(function(x){ return x.id!==pid; });
+  DATA.saude = DATA.saude.filter(function(s){ return s.partyId!==pid; });
+  DATA.dispatches = DATA.dispatches.filter(function(d){ return !saudaIdSet[d.saudaId]; });
+
+  // Firebase delete
+  fbDelete('parties', pid);
+  beforeSaudes.forEach(function(s){ fbDelete('saude', s.id); });
+  beforeDisps.forEach(function(d){ fbDelete('dispatches', d.id); });
+
+  // Audit + undo
+  var g = createAuditGroupBase('Delete Party', 'parties');
+  g.undoOps.push({collection:'parties', id:pid, before:beforeParty});
+  beforeSaudes.forEach(function(s){ g.undoOps.push({collection:'saude', id:s.id, before:s}); });
+  beforeDisps.forEach(function(d){ g.undoOps.push({collection:'dispatches', id:d.id, before:d}); });
+  auditWriteGroup(g);
+
+  toast('Party delete ho gayi','i');
+  fillBrokerFilter();
+  rerenderActiveTab();
+}
+
 // ===== BROKERS =====
 function renderBrokers(){
   var html=DATA.brokers.map(function(b){
@@ -946,7 +1057,8 @@ function renderBrokers(){
       +'<div class="jstats"><div class="jst"><div class="jsv">'+bs.length+'</div><div class="jsl">Saude</div></div>'
       +'<div class="jst"><div class="jsv" style="color:#16a34a">'+fmtD(totDisp)+' Qtl</div><div class="jsl">Handled</div></div>'
       +'<div class="jst"><div class="jsv" style="color:var(--orange)">'+fmtD(totPend)+' Qtl</div><div class="jsl">Pending</div></div></div>'
-      +'<button class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:11px" onclick="openEditBroker(\''+b.id+'\')">✏ Edit</button></div>';
+      +'<button class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:11px" onclick="openEditBroker(\''+b.id+'\')">✏ Edit</button>'
+      +'<button class="btn btn-red2" style="width:100%;margin-top:8px;font-size:11px" onclick="delBroker(\''+b.id+'\')">🗑 Delete</button></div>';
   }).join('');
   document.getElementById('brokers-grid').innerHTML=html||'<div class="empty"><div class="ei">🤝</div><h3>Koi broker nahi</h3></div>';
 }
@@ -961,7 +1073,7 @@ function openNewBroker(){
 }
 function saveNewBroker(){
   var name=document.getElementById('nb-name').value.trim();if(!name){toast('Broker name zaroori hai!','e');return;}
-  DATA.brokers.push({id:'B'+DATA.nB,name:name,city:document.getElementById('nb-city').value,mobile:document.getElementById('nb-mob').value});
+  DATA.brokers.push({id:genSafeId('B', DATA.nB),name:name,city:document.getElementById('nb-city').value,mobile:document.getElementById('nb-mob').value});
   DATA.nB++;closeModal();toast('Broker add ho gaya!','s');renderBrokers();
 }
 function openEditBroker(bid){
@@ -979,6 +1091,40 @@ function updateBroker(bid){
   var name=document.getElementById('eb-name').value.trim();if(!name){toast('Name zaroori hai','e');return;}
   b.name=name;b.city=document.getElementById('eb-city').value;b.mobile=document.getElementById('eb-mob').value;
   closeModal();toast('Update ho gaya!','s');renderBrokers();
+}
+
+function delBroker(bid){
+  if(!requireAdmin()) return;
+  var b = DATA.brokers.find(function(x){return x.id===bid;});
+  if(!b){ toast('Broker not found','e'); return; }
+  if(!confirm('Broker delete karna chahte ho? Related Saude/Dispatches bhi delete ho jayenge.')) return;
+
+  var beforeBroker = deepClone(b);
+  var relatedSaudes = DATA.saude.filter(function(s){ return s.brokerId===bid; });
+  var beforeSaudes = deepClone(relatedSaudes);
+  var saudaIdSet = relatedSaudes.reduce(function(m,s){ m[s.id]=true; return m; }, {});
+  var beforeDisps = deepClone(DATA.dispatches.filter(function(d){ return !!saudaIdSet[d.saudaId]; }));
+
+  // Local delete
+  DATA.brokers = DATA.brokers.filter(function(x){ return x.id!==bid; });
+  DATA.saude = DATA.saude.filter(function(s){ return s.brokerId!==bid; });
+  DATA.dispatches = DATA.dispatches.filter(function(d){ return !saudaIdSet[d.saudaId]; });
+
+  // Firebase delete
+  fbDelete('brokers', bid);
+  beforeSaudes.forEach(function(s){ fbDelete('saude', s.id); });
+  beforeDisps.forEach(function(d){ fbDelete('dispatches', d.id); });
+
+  // Audit + undo
+  var g = createAuditGroupBase('Delete Broker', 'brokers');
+  g.undoOps.push({collection:'brokers', id:bid, before:beforeBroker});
+  beforeSaudes.forEach(function(s){ g.undoOps.push({collection:'saude', id:s.id, before:s}); });
+  beforeDisps.forEach(function(d){ g.undoOps.push({collection:'dispatches', id:d.id, before:d}); });
+  auditWriteGroup(g);
+
+  toast('Broker delete ho gayi','i');
+  fillBrokerFilter();
+  rerenderActiveTab();
 }
 
 // ===== REPORTS =====
@@ -1189,8 +1335,20 @@ function setSyncStatus(s){
   el.innerHTML = map[s] || map.init;
 }
 
-// initFB handled by loadFB() below
-function initFB(){ return FB_READY; }
+// Init Firebase
+function initFB(){
+  try {
+    var mhApp = firebase.apps.find(function(a){return a.name==='mhapp';}) || firebase.initializeApp(FB_CONFIG,'mhapp');
+    FB = mhApp.database();
+    FB_READY = true;
+    setSyncStatus('ok');
+    return true;
+  } catch(e) {
+    console.error('Firebase init error:', e);
+    setSyncStatus('err');
+    return false;
+  }
+}
 
 // ---- LOAD ALL DATA FROM FIREBASE ----
 function loadAllFromFB(callback){
@@ -1212,10 +1370,8 @@ function loadAllFromFB(callback){
       }
       loaded++;
       if(loaded === COLLECTIONS.length){
-        recalcCounters();
         saveToLocalStorage();
         setSyncStatus('ok');
-        hideLoader();
         if(callback) callback();
       }
     }).catch(function(e){
@@ -1223,9 +1379,7 @@ function loadAllFromFB(callback){
       loaded++;
       if(loaded === COLLECTIONS.length){
         loadFromLocalStorage();
-        recalcCounters();
         setSyncStatus('offline');
-        hideLoader();
         if(callback) callback();
       }
     });
@@ -1434,324 +1588,800 @@ updateBroker = function(bid){
 };
 
 // =====================================================
+// ADVANCED FEATURES: Safe IDs, Audit Log, Undo,
+// CSV Import, Auth-based Role gating
 // =====================================================
-// FIREBASE — Cold Store jaisi dynamic loading
-// =====================================================
-var FB_CONFIG = {
-  apiKey:            'AIzaSyBhvCmZLVSOKflr7Ub_Vjhw_1CBlV2PaAI',
-  authDomain:        'primecoldstore-439ab.firebaseapp.com',
-  databaseURL:       'https://primecoldstore-439ab-default-rtdb.asia-southeast1.firebasedatabase.app',
-  projectId:         'primecoldstore-439ab',
-  storageBucket:     'primecoldstore-439ab.firebasestorage.app',
-  messagingSenderId: '848383603685',
-  appId:             '1:848383603685:web:7c9b45a123aa25e153f50c'
+
+// ---------- Safe ID generator ----------
+function genSafeId(prefix, seq){
+  // prefix: 'S' | 'D' | 'P' | 'B'
+  // seq is just used to keep old-style readability.
+  var ts = Date.now().toString(36);
+  var rnd = Math.floor(Math.random() * 1e9).toString(36);
+  var n = (seq===undefined||seq===null) ? '' : String(seq).padStart(3,'0');
+  return ''+prefix+n+'_'+ts+'_'+rnd;
+}
+
+function deepClone(x){
+  return x ? JSON.parse(JSON.stringify(x)) : x;
+}
+
+function safeLower(x){
+  return String(x||'').toLowerCase().trim();
+}
+
+function recalcSeqFromData(){
+  // Fixes "nS/nD/nP/nB not updated after Firebase load" issue.
+  function maxSeq(arr, grabFn){
+    var m = -1;
+    (arr||[]).forEach(function(x){
+      var n = grabFn(x);
+      if(n!==null && n!==undefined && !isNaN(n)) m = Math.max(m, n);
+    });
+    return m;
+  }
+  DATA.nS = maxSeq(DATA.saude, function(s){
+    var t = s.no || s.id || '';
+    var m = String(t).match(/S[-_]?(\d+)/);
+    if(m&&m[1]) return parseInt(m[1],10);
+    var m2 = String(s.id||'').match(/[S](\d{1,7})_/);
+    return m2 && m2[1] ? parseInt(m2[1],10) : null;
+  }) + 1;
+  DATA.nD = maxSeq(DATA.dispatches, function(d){
+    var t = d.id || '';
+    var m = String(t).match(/D[-_]?(\d+)/);
+    if(m&&m[1]) return parseInt(m[1],10);
+    var m2 = String(t).match(/[D](\d{1,7})_/);
+    return m2 && m2[1] ? parseInt(m2[1],10) : null;
+  }) + 1;
+  DATA.nP = maxSeq(DATA.parties, function(p){
+    var t = p.id || '';
+    var m = String(t).match(/P[-_]?(\d+)/);
+    if(m&&m[1]) return parseInt(m[1],10);
+    var m2 = String(t).match(/[P](\d{1,7})_/);
+    return m2 && m2[1] ? parseInt(m2[1],10) : null;
+  }) + 1;
+  DATA.nB = maxSeq(DATA.brokers, function(b){
+    var t = b.id || '';
+    var m = String(t).match(/B[-_]?(\d+)/);
+    if(m&&m[1]) return parseInt(m[1],10);
+    var m2 = String(t).match(/[B](\d{1,7})_/);
+    return m2 && m2[1] ? parseInt(m2[1],10) : null;
+  }) + 1;
+  if(!isFinite(DATA.nS)) DATA.nS = 1;
+  if(!isFinite(DATA.nD)) DATA.nD = 1;
+  if(!isFinite(DATA.nP)) DATA.nP = 1;
+  if(!isFinite(DATA.nB)) DATA.nB = 1;
+}
+
+// ---------- Auth + Role gating ----------
+var AUTH = {
+  user: null,
+  uid: null,
+  role: 'guest',
+  roleLoaded: false,
+  isAdmin: false
 };
 
-function loadFB(){
-  return new Promise(function(res){
-    if(FB_READY){ res(); return; }
-    var s1 = document.createElement('script');
-    s1.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
-    s1.onload = function(){
-      var s2 = document.createElement('script');
-      s2.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js';
-      s2.onload = function(){
-        try{
-          var mhApp = firebase.apps.find(function(a){return a.name==='mhapp';})
-                   || firebase.initializeApp(FB_CONFIG,'mhapp');
-          FB = mhApp.database();
-          FB_READY = true;
-          setSyncStatus('ok');
-        } catch(e){
-          console.log('FB err:',e);
-          setSyncStatus('err');
-        }
-        res();
-      };
-      document.head.appendChild(s2);
-    };
-    document.head.appendChild(s1);
+// Optional: hardcode admins for dev/testing.
+// If empty, role will be read from Firebase DB: mh_roles/<uid>/role === 'admin'
+var ADMIN_UIDS = [];
+
+function refreshAuthUI(){
+  var pill = document.getElementById('auth-pill');
+  var btnLogin = document.getElementById('btn-login');
+  var btnLogout = document.getElementById('btn-logout');
+  if(btnLogin) btnLogin.style.display = (AUTH.user ? 'none' : 'inline-flex');
+  if(btnLogout) btnLogout.style.display = (AUTH.user ? 'inline-flex' : 'none');
+  if(pill){
+    var roleText = AUTH.user ? ('Role: ' + AUTH.role) : 'Role: Guest';
+    pill.innerHTML = '<span style="color:rgba(255,255,255,0.6)">'+roleText+'</span>';
+  }
+}
+
+function isAdminNow(){
+  if(!AUTH.user) return true; // keep existing behavior for guest mode
+  if(AUTH.roleLoaded) return !!AUTH.isAdmin;
+  return false; // auth exists but role not loaded yet
+}
+
+function requireAdmin(){
+  if(!AUTH.user) return true;
+  if(AUTH.roleLoaded && !AUTH.isAdmin){
+    toast('Only admin can do this action.','e');
+    return false;
+  }
+  if(!AUTH.roleLoaded){
+    toast('Role loading... try again in a second.','e');
+    return false;
+  }
+  return true;
+}
+
+function openLoginModal(){
+  var h='<div class="mh"><div class="mt">Login</div><button class="mx" onclick="closeModal()">✕</button></div>'
+    +'<div class="mb">'
+    +'<div class="fgrid">'
+    +'<div class="fg2"><label class="flbl">Email</label><input class="finp" id="li-email" placeholder="you@domain.com"></div>'
+    +'<div class="fg2"><label class="flbl">Password</label><input type="password" class="finp" id="li-pass" placeholder="••••••••"></div>'
+    +'</div>'
+    +'<div class="mf" style="border-top:none;background:transparent;padding:0;margin-top:14px;position:static">'
+    +'<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>'
+    +'<button class="btn btn-blue" onclick="signInUser()">Sign In</button>'
+    +'</div>'
+    +'</div>';
+  openModal(h);
+}
+
+function signInUser(){
+  var email = (document.getElementById('li-email')||{}).value || '';
+  var pass = (document.getElementById('li-pass')||{}).value || '';
+  if(!email || !pass){ toast('Email aur Password zaroori hai','e'); return; }
+  if(!firebase || !firebase.auth){ toast('Auth module nahi mila.','e'); return; }
+  firebase.auth().signInWithEmailAndPassword(email, pass).then(function(res){
+    closeModal();
+  }).catch(function(e){
+    console.error(e);
+    toast('Login fail: '+(e&&e.message?e.message:'') ,'e');
   });
 }
 
-// =====================================================
-// INIT — Cold Store jaisa, seedha render phir Firebase
-// =====================================================
-loadFromLocalStorage();
-recalcCounters();
-renderDash();
-setSyncStatus('init');
-
-loadFB().then(function(){
-  loadAllFromFB(function(){
-    renderDash();
-    startRealtimeListeners();
-  });
-});
-// =====================================================
-// FEATURE 1: QUICK ADD PARTY / BROKER from Sauda Form
-// =====================================================
-var _sf = {};
-function _saveSF(){
-  _sf = {
-    pid:   (document.getElementById('ns-party')  ||{value:''}).value,
-    bid:   (document.getElementById('ns-broker') ||{value:''}).value,
-    qty:   (document.getElementById('ns-qty')    ||{value:''}).value,
-    rate:  (document.getElementById('ns-rate')   ||{value:''}).value,
-    loc:   (document.getElementById('ns-loc')    ||{value:''}).value,
-    notes: (document.getElementById('ns-notes')  ||{value:''}).value,
-    date:  (document.getElementById('ns-date')   ||{value:''}).value,
-    ot:    (document.getElementById('ns-onetime')||{checked:false}).checked
-  };
-}
-function _restoreSF(){
-  openNewSauda();
-  setTimeout(function(){
-    if(_sf.date)  document.getElementById('ns-date').value   = _sf.date;
-    if(_sf.qty)   document.getElementById('ns-qty').value    = _sf.qty;
-    if(_sf.rate)  document.getElementById('ns-rate').value   = _sf.rate;
-    if(_sf.loc)   document.getElementById('ns-loc').value    = _sf.loc;
-    if(_sf.notes) document.getElementById('ns-notes').value  = _sf.notes;
-    if(_sf.ot)    document.getElementById('ns-onetime').checked = _sf.ot;
-    var pid = _sf.newPid || _sf.pid;
-    var bid = _sf.newBid || _sf.bid;
-    if(pid) document.getElementById('ns-party').value  = pid;
-    if(bid) document.getElementById('ns-broker').value = bid;
-    calcNSAmt();
-  }, 150);
-}
-function qaParty(){
-  _saveSF();
-  openModal(
-    '<div class="mh"><div><div class="mt">👤 Naya Party — Quick Add</div>'
-   +'<div class="mt-sub">Party save hogi, sauda form wapas aayega</div></div>'
-   +'<button class="mx" onclick="_restoreSF()">✕</button></div>'
-   +'<div class="mb">'
-   +'<div style="background:var(--bluebg);border:1px solid #c5d8f8;border-radius:6px;padding:8px 12px;font-size:12px;color:var(--blue2);margin-bottom:12px">✅ Party add karo — sauda form ka data bachega</div>'
-   +'<div class="fg2" style="margin-bottom:11px"><label class="flbl">Party Name *</label><input class="finp" id="qp-n" placeholder="e.g. Ram Traders"></div>'
-   +'<div class="fgrid"><div class="fg2"><label class="flbl">City</label><input class="finp" id="qp-c" placeholder="Ludhiana"></div>'
-   +'<div class="fg2"><label class="flbl">Mobile</label><input class="finp" id="qp-m" placeholder="9876543210"></div></div>'
-   +'<div class="fg2"><label class="flbl">GST (optional)</label><input class="finp" id="qp-g" placeholder="03XXXXX..."></div>'
-   +'</div>'
-   +'<div class="mf"><button class="btn btn-ghost" onclick="_restoreSF()">← Wapas</button>'
-   +'<button class="btn btn-blue" onclick="saveQP()">💾 Party Save Karo</button></div>'
-  );
-}
-function saveQP(){
-  var n = (document.getElementById('qp-n')||{value:''}).value.trim();
-  if(!n){ toast('Party name zaroori hai!','e'); return; }
-  var pid = 'P'+DATA.nP;
-  var np  = {id:pid, name:n,
-    city:   (document.getElementById('qp-c')||{value:''}).value,
-    mobile: (document.getElementById('qp-m')||{value:''}).value,
-    gst:    (document.getElementById('qp-g')||{value:''}).value};
-  DATA.parties.push(np); DATA.nP++;
-  fbSave('parties', pid, np);
-  toast('Party add ho gayi!','s');
-  _sf.newPid = pid;
-  setTimeout(function(){ _restoreSF(); }, 200);
-}
-function qaBroker(){
-  _saveSF();
-  openModal(
-    '<div class="mh"><div><div class="mt">🤝 Naya Broker — Quick Add</div>'
-   +'<div class="mt-sub">Broker save hoga, sauda form wapas aayega</div></div>'
-   +'<button class="mx" onclick="_restoreSF()">✕</button></div>'
-   +'<div class="mb">'
-   +'<div style="background:var(--bluebg);border:1px solid #c5d8f8;border-radius:6px;padding:8px 12px;font-size:12px;color:var(--blue2);margin-bottom:12px">✅ Broker add karo — sauda form ka data bachega</div>'
-   +'<div class="fg2" style="margin-bottom:11px"><label class="flbl">Broker Name *</label><input class="finp" id="qb-n" placeholder="e.g. Sandeep Kumar"></div>'
-   +'<div class="fgrid"><div class="fg2"><label class="flbl">City</label><input class="finp" id="qb-c" placeholder="Ludhiana"></div>'
-   +'<div class="fg2"><label class="flbl">Mobile</label><input class="finp" id="qb-m" placeholder="9871122334"></div></div>'
-   +'</div>'
-   +'<div class="mf"><button class="btn btn-ghost" onclick="_restoreSF()">← Wapas</button>'
-   +'<button class="btn btn-blue" onclick="saveQB()">💾 Broker Save Karo</button></div>'
-  );
-}
-function saveQB(){
-  var n = (document.getElementById('qb-n')||{value:''}).value.trim();
-  if(!n){ toast('Broker name zaroori hai!','e'); return; }
-  var bid = 'B'+DATA.nB;
-  var nb  = {id:bid, name:n,
-    city:   (document.getElementById('qb-c')||{value:''}).value,
-    mobile: (document.getElementById('qb-m')||{value:''}).value};
-  DATA.brokers.push(nb); DATA.nB++;
-  fbSave('brokers', bid, nb);
-  toast('Broker add ho gaya!','s');
-  _sf.newBid = bid;
-  setTimeout(function(){ _restoreSF(); }, 200);
+function signOutUser(){
+  if(firebase && firebase.auth){
+    firebase.auth().signOut().catch(function(){});
+  }
 }
 
-// =====================================================
-// FEATURE 2: BULK IMPORT
-// =====================================================
-function openImportModal(){
-  openModal(
-    '<div class="mh"><div class="mt">📥 Bulk Import</div><button class="mx" onclick="closeModal()">✕</button></div>'
-   +'<div class="mb">'
-   +'<div style="display:flex;gap:2px;background:var(--s3);border-radius:7px;padding:3px;margin-bottom:14px">'
-   +'<button id="it-s" onclick="siTab(\'s\')" style="flex:1;padding:7px;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;background:var(--blue);color:#fff">📄 Saude</button>'
-   +'<button id="it-p" onclick="siTab(\'p\')" style="flex:1;padding:7px;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:var(--text3)">👤 Parties</button>'
-   +'<button id="it-b" onclick="siTab(\'b\')" style="flex:1;padding:7px;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:var(--text3)">🤝 Brokers</button>'
-   +'</div>'
-   +'<div id="ic-s">'
-   +'<div style="background:var(--ybg);border:1px solid var(--yb);border-radius:6px;padding:9px 12px;font-size:11px;color:var(--yellow);margin-bottom:8px"><strong>Format (har line = 1 sauda):</strong><br><span style="font-family:monospace">Party Name, Broker Name, Qty(MT), Rate, Location, Notes, onetime(yes/no)</span><br>Agar party/broker naya ho toh apne aap ban jaayega.</div>'
-   +'<div style="font-family:monospace;font-size:11px;background:var(--s2);padding:7px 10px;border-radius:5px;margin-bottom:8px;color:var(--text2)">Ram Traders, Sandeep Kumar, 100, 2150, Delhi, COD deal, no<br>Gopal Agro, Rajesh Sharma, 50, 2200, Mumbai, , yes</div>'
-   +'<textarea class="finp" id="itxt-s" rows="6" placeholder="Yahan paste karo..." style="font-family:monospace;font-size:12px"></textarea>'
-   +'</div>'
-   +'<div id="ic-p" style="display:none">'
-   +'<div style="background:var(--ybg);border:1px solid var(--yb);border-radius:6px;padding:9px 12px;font-size:11px;color:var(--yellow);margin-bottom:8px"><strong>Format (har line = 1 party):</strong><br><span style="font-family:monospace">Party Name, City, Mobile, GST</span></div>'
-   +'<div style="font-family:monospace;font-size:11px;background:var(--s2);padding:7px 10px;border-radius:5px;margin-bottom:8px;color:var(--text2)">Ram Traders, Ludhiana, 9876543210, 03AABCU9603R1ZP<br>Shyam Enterprises, Jalandhar, 9812345678,</div>'
-   +'<textarea class="finp" id="itxt-p" rows="6" placeholder="Yahan paste karo..." style="font-family:monospace;font-size:12px"></textarea>'
-   +'</div>'
-   +'<div id="ic-b" style="display:none">'
-   +'<div style="background:var(--ybg);border:1px solid var(--yb);border-radius:6px;padding:9px 12px;font-size:11px;color:var(--yellow);margin-bottom:8px"><strong>Format (har line = 1 broker):</strong><br><span style="font-family:monospace">Broker Name, City, Mobile</span></div>'
-   +'<div style="font-family:monospace;font-size:11px;background:var(--s2);padding:7px 10px;border-radius:5px;margin-bottom:8px;color:var(--text2)">Sandeep Kumar, Ludhiana, 9871122334<br>Rajesh Sharma, Jalandhar, 9811223344</div>'
-   +'<textarea class="finp" id="itxt-b" rows="6" placeholder="Yahan paste karo..." style="font-family:monospace;font-size:12px"></textarea>'
-   +'</div>'
-   +'<div id="i-result" style="margin-top:10px"></div>'
-   +'</div>'
-   +'<div class="mf"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button>'
-   +'<button class="btn btn-blue" onclick="doImport()">📥 Import Karo</button></div>'
-  );
-}
-function siTab(t){
-  ['s','p','b'].forEach(function(x){
-    document.getElementById('ic-'+x).style.display = (x===t?'block':'none');
-    var b = document.getElementById('it-'+x);
-    b.style.background = (x===t?'var(--blue)':'transparent');
-    b.style.color      = (x===t?'#fff':'var(--text3)');
+function loadRoleForUid(uid){
+  AUTH.roleLoaded = false;
+  AUTH.role = 'guest';
+  AUTH.isAdmin = false;
+  if(!FB_READY){
+    // Role read needs RTDB access; keep guest restrictions until FB is ready.
+    AUTH.roleLoaded = true;
+    AUTH.role = 'guest';
+    AUTH.isAdmin = false;
+    refreshAuthUI();
+    return;
+  }
+  FB.ref('mh_roles/'+uid+'/role').once('value').then(function(snap){
+    var role = snap.val();
+    if(ADMIN_UIDS.indexOf(uid)!==-1) role = 'admin';
+    AUTH.role = role || 'user';
+    AUTH.isAdmin = (AUTH.role === 'admin');
+    AUTH.roleLoaded = true;
+    refreshAuthUI();
+  }).catch(function(){
+    // If role can't be read, default to "user".
+    AUTH.roleLoaded = true;
+    AUTH.role = 'user';
+    AUTH.isAdmin = false;
+    refreshAuthUI();
   });
 }
-function pLine(l){ return l.split(',').map(function(x){ return x.trim(); }); }
-function doImport(){
-  var t='s';
-  if(document.getElementById('ic-p').style.display!=='none') t='p';
-  if(document.getElementById('ic-b').style.display!=='none') t='b';
-  var raw = (document.getElementById('itxt-'+t)||{value:''}).value.trim();
-  if(!raw){ toast('Kuch paste karo pehle!','e'); return; }
-  var added=0, skip=0, errs=[], today=todayDate();
-  raw.split('\n').forEach(function(line,i){
-    line=line.trim(); if(!line) return;
-    var c=pLine(line);
-    if(t==='p'){
-      var n=c[0]; if(!n){ errs.push('Line '+(i+1)+': Name missing'); return; }
-      if(DATA.parties.find(function(p){return p.name.toLowerCase()===n.toLowerCase();})){ skip++; return; }
-      var pid='P'+DATA.nP;
-      var np={id:pid,name:n,city:c[1]||'',mobile:c[2]||'',gst:c[3]||''};
-      DATA.parties.push(np); DATA.nP++; fbSave('parties',pid,np); added++;
-    } else if(t==='b'){
-      var n=c[0]; if(!n){ errs.push('Line '+(i+1)+': Name missing'); return; }
-      if(DATA.brokers.find(function(b){return b.name.toLowerCase()===n.toLowerCase();})){ skip++; return; }
-      var bid='B'+DATA.nB;
-      var nb={id:bid,name:n,city:c[1]||'',mobile:c[2]||''};
-      DATA.brokers.push(nb); DATA.nB++; fbSave('brokers',bid,nb); added++;
-    } else {
-      var pn=c[0],bn=c[1],qty=parseFloat(c[2]),rate=parseFloat(c[3]);
-      if(!pn||!bn||!qty||!rate){ errs.push('Line '+(i+1)+': Party,Broker,Qty,Rate zaroori'); return; }
-      var party=DATA.parties.find(function(p){return p.name.toLowerCase()===pn.toLowerCase();});
-      if(!party){var pid='P'+DATA.nP;party={id:pid,name:pn,city:'',mobile:'',gst:''};DATA.parties.push(party);DATA.nP++;fbSave('parties',pid,party);}
-      var broker=DATA.brokers.find(function(b){return b.name.toLowerCase()===bn.toLowerCase();});
-      if(!broker){var bid='B'+DATA.nB;broker={id:bid,name:bn,city:'',mobile:''};DATA.brokers.push(broker);DATA.nB++;fbSave('brokers',bid,broker);}
-      var sid='S'+String(DATA.nS).padStart(3,'0');
-      var ns={id:sid,no:'S-'+String(DATA.nS).padStart(3,'0'),date:today,partyId:party.id,brokerId:broker.id,qty:qty,rate:rate,location:c[4]||'',notes:c[5]||'',oneTime:(c[6]||'').toLowerCase()==='yes'};
-      DATA.saude.push(ns); DATA.nS++; fbSave('saude',sid,ns); added++;
+
+function initAuth(){
+  if(!firebase || !firebase.auth) return;
+  firebase.auth().onAuthStateChanged(function(user){
+    AUTH.user = user || null;
+    AUTH.uid = user ? user.uid : null;
+    if(user){
+      loadRoleForUid(user.uid);
+    }else{
+      AUTH.roleLoaded = true;
+      AUTH.role = 'guest';
+      AUTH.isAdmin = false;
+      refreshAuthUI();
+    }
+    updateUndoButtonVisibility();
+  });
+}
+
+// ---------- Undo + Audit storage ----------
+var AUDIT_LOCAL_KEY = 'mh_audit_local_v1';
+var UNDO_LOCAL_KEY = 'mh_undo_stack_v1';
+
+function readJsonLocal(key, fallback){
+  try{
+    var raw = localStorage.getItem(key);
+    if(!raw) return fallback;
+    return JSON.parse(raw);
+  }catch(e){ return fallback; }
+}
+function writeJsonLocal(key, val){
+  try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){}
+}
+
+function pushAuditLocal(group){
+  var list = readJsonLocal(AUDIT_LOCAL_KEY, []);
+  list.push(group);
+  // keep last 200
+  if(list.length > 200) list = list.slice(list.length-200);
+  writeJsonLocal(AUDIT_LOCAL_KEY, list);
+}
+
+function pushUndoLocal(group){
+  var st = readJsonLocal(UNDO_LOCAL_KEY, []);
+  st.push(group);
+  if(st.length > 30) st = st.slice(st.length-30);
+  writeJsonLocal(UNDO_LOCAL_KEY, st);
+  updateUndoButtonVisibility();
+}
+
+function popUndoLocal(){
+  var st = readJsonLocal(UNDO_LOCAL_KEY, []);
+  var g = st.length ? st[st.length-1] : null;
+  if(st.length) st = st.slice(0, st.length-1);
+  writeJsonLocal(UNDO_LOCAL_KEY, st);
+  updateUndoButtonVisibility();
+  return g;
+}
+
+function updateUndoButtonVisibility(){
+  var btn = document.getElementById('btn-undo');
+  if(!btn) return;
+  var st = readJsonLocal(UNDO_LOCAL_KEY, []);
+  // allow undo in guest mode too, but only if there is something.
+  btn.style.display = st.length ? 'inline-flex' : 'none';
+}
+
+function tryWriteAuditGroupToFB(group){
+  // Store globally to allow audit history.
+  if(!FB_READY || !firebase || !firebase.auth) return Promise.resolve();
+  var uid = group.uid || (AUTH.user ? AUTH.user.uid : null);
+  if(!uid) return Promise.resolve();
+  // Write into top-level node so queries are easy.
+  return FB.ref('mh_audit_groups/'+group.id).set(group).catch(function(){});
+}
+
+function getActiveTabId(){
+  var activeTab = document.querySelector('.tab.active');
+  if(!activeTab) return 'dash';
+  var tid = activeTab.id.replace('tab-','');
+  return tid || 'dash';
+}
+
+function rerenderActiveTab(){
+  var tid = getActiveTabId();
+  if(tid==='dash') renderDash();
+  else if(tid==='saude') renderSaude();
+  else if(tid==='dispatch') renderDispatch();
+  else if(tid==='parties') renderParties();
+  else if(tid==='brokers') renderBrokers();
+  updHeader();
+}
+
+function applyUndoOps(group){
+  // undoOps items: {collection:'saude'|'dispatches'|'parties'|'brokers', id:'...', before:object|null}
+  var ops = (group.undoOps||[]).slice();
+  // Ensure master data first, then dispatches.
+  var order = {'parties':0,'brokers':0,'saude':1,'dispatches':2};
+  ops.sort(function(a,b){ return (order[a.collection]||9)-(order[b.collection]||9); });
+
+  ops.forEach(function(op){
+    var col = op.collection;
+    var id = op.id;
+    if(op.before === null){
+      // record didn't exist before -> delete
+      // Update local DATA
+      if(DATA[col]) DATA[col] = (DATA[col]||[]).filter(function(x){return x.id!==id;});
+      if(FB_READY) fbDelete(col, id);
+    }else{
+      // record existed before -> restore
+      if(!DATA[col]) DATA[col] = [];
+      var exists = DATA[col].find(function(x){ return x.id===id; });
+      if(exists){
+        // replace in place
+        DATA[col].forEach(function(x){ if(x.id===id) Object.assign(x, deepClone(op.before)); });
+      }else{
+        DATA[col].push(deepClone(op.before));
+      }
+      if(FB_READY) fbSave(col, id, deepClone(op.before));
     }
   });
-  if(t==='p') renderParties();
-  else if(t==='b') renderBrokers();
-  else { fillBrokerFilter(); renderSaude(); }
-  updHeader();
-  var ok=!errs.length;
-  document.getElementById('i-result').innerHTML=
-    '<div style="background:'+(ok?'var(--gbg)':'var(--rbg)')+';border:1px solid '+(ok?'var(--gb)':'var(--rb)')+';border-radius:7px;padding:10px 12px;font-size:12px">'
-   +(ok?'✅':'⚠️')+' <strong>Import Complete</strong> — Added: <strong>'+added+'</strong>, Skipped: '+skip
-   +(errs.length?'<br><span style="color:var(--red)">'+errs.join(' | ')+'</span>':'')+'</div>';
-  if(added) toast(added+' records import ho gaye!','s');
 }
 
-// =====================================================
-// FEATURE 3: MULTI DISPATCH
-// =====================================================
-var _mdN=0;
-function openMultiDispatch(){
-  _mdN=0;
-  var sOpts=DATA.saude.map(function(s){
-    return '<option value="'+s.id+'">'+s.no+' — '+getParty(s.partyId).name+' (Baki: '+fmtD(pendingQtl(s.id))+' Qtl)</option>';
-  }).join('');
-  openModal(
-    '<div class="mh"><div><div class="mt">🚚 Multi Dispatch</div>'
-   +'<div class="mt-sub">Ek saude ke liye kai vehicles ek saath add karo</div></div>'
-   +'<button class="mx" onclick="closeModal()">✕</button></div>'
-   +'<div class="mb">'
-   +'<div class="fg2" style="margin-bottom:10px"><label class="flbl">Sauda Select *</label>'
-   +'<select class="finp" id="md-sid" onchange="mdBal()">'
-   +'<option value="">-- Sauda chunein --</option>'+sOpts+'</select></div>'
-   +'<div id="md-bal" style="display:none;background:var(--bluebg);border:1px solid #c5d8f8;border-radius:6px;padding:7px 12px;font-size:12px;color:var(--blue2);margin-bottom:10px"></div>'
-   +'<div class="fg2" style="margin-bottom:12px"><label class="flbl">Date (sab ke liye)</label>'
-   +'<input type="date" class="finp" id="md-date" value="'+todayDate()+'"></div>'
-   +'<div id="md-rows"></div>'
-   +'<button class="btn btn-ghost" onclick="mdRow()" style="width:100%;margin-bottom:4px">＋ Aur Vehicle Add Karo</button>'
-   +'</div>'
-   +'<div class="mf"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button>'
-   +'<button class="btn btn-blue" onclick="mdSave()">💾 Sab Save Karo</button></div>'
-  );
-  mdRow(); mdRow();
+function undoLastAction(){
+  if(!readJsonLocal(UNDO_LOCAL_KEY, []).length){
+    toast('Undo available nahi hai','e');
+    return;
+  }
+  if(!requireAdmin()){
+    return;
+  }
+  var group = popUndoLocal();
+  if(!group) return;
+  applyUndoOps(group);
+  toast('Undo ho gaya','s');
+  // Optional: write undo event to audit history.
+  var undoEvent = {
+    id: group.id+'_undo',
+    ts: Date.now(),
+    uid: group.uid,
+    action: 'undo',
+    summary: 'Undo: '+group.summary,
+    undoOf: group.id,
+    undoOps: [],
+    entity: group.entity
+  };
+  pushAuditLocal(undoEvent);
+  tryWriteAuditGroupToFB(undoEvent);
+  rerenderActiveTab();
 }
-function mdBal(){
-  var sid=document.getElementById('md-sid').value;
-  var el=document.getElementById('md-bal');
-  if(sid){ el.style.display='block'; el.innerHTML='📦 Baki: <strong>'+fmtD(pendingQtl(sid))+' Qtl</strong> / '+fmtD(qtlToMt(pendingQtl(sid)))+' MT'; }
-  else el.style.display='none';
+
+// ---------- Audit wrappers ----------
+function createAuditGroupBase(summary, entity){
+  var uid = AUTH.user ? AUTH.user.uid : null;
+  return {
+    id: 'A'+Date.now().toString(36)+'_'+Math.floor(Math.random()*1e9).toString(36),
+    ts: Date.now(),
+    uid: uid || 'guest',
+    action: 'write',
+    summary: summary || '',
+    entity: entity || '',
+    undoOps: []
+  };
 }
-function mdRow(){
-  _mdN++;
-  var n=_mdN;
-  var d=document.createElement('div');
-  d.id='mdr-'+n;
-  d.style.cssText='background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;margin-bottom:8px';
-  d.innerHTML=
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
-   +'<span style="font-size:12px;font-weight:600;color:var(--blue)">Vehicle '+n+'</span>'
-   +'<button onclick="document.getElementById(\'mdr-'+n+'\').remove()" style="background:var(--rbg);color:var(--red);border:1px solid var(--rb);border-radius:4px;padding:2px 9px;font-size:11px;cursor:pointer">✕</button>'
-   +'</div>'
-   +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">'
-   +'<div class="fg2"><label class="flbl">Vehicle No *</label><input class="finp" id="md-v'+n+'" placeholder="PB10AB1234" style="text-transform:uppercase"></div>'
-   +'<div class="fg2"><label class="flbl">Driver</label><input class="finp" id="md-d'+n+'" placeholder="Driver naam"></div>'
-   +'<div class="fg2"><label class="flbl">Gatepass</label><input class="finp" id="md-g'+n+'" placeholder="GP-..."></div>'
-   +'</div>'
-   +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
-   +'<div class="fg2"><label class="flbl">Quintal *</label><input type="number" class="finp" id="md-q'+n+'" placeholder="Qtl" step="0.1" oninput="var q=parseFloat(this.value)||0;document.getElementById(\'md-m'+n+'\').value=q?fmtD(qtlToMt(q)):\'\'"></div>'
-   +'<div class="fg2"><label class="flbl">MT (auto)</label><input type="number" class="finp" id="md-m'+n+'" placeholder="MT" step="0.01" oninput="var m=parseFloat(this.value)||0;document.getElementById(\'md-q'+n+'\').value=m?fmtD(mtToQtl(m)):\'\'"></div>'
-   +'<div class="fg2"><label class="flbl">Bags</label><input type="number" class="finp" id="md-b'+n+'" placeholder="Bags"></div>'
-   +'</div>';
-  document.getElementById('md-rows').appendChild(d);
+
+function auditWriteGroup(group){
+  pushAuditLocal(group);
+  pushUndoLocal(group);
+  tryWriteAuditGroupToFB(group);
 }
-function mdSave(){
-  var sid=document.getElementById('md-sid').value;
-  var date=document.getElementById('md-date').value;
-  if(!sid){ toast('Sauda select karo!','e'); return; }
-  var rows=document.querySelectorAll('[id^="mdr-"]');
-  if(!rows.length){ toast('Kam se kam ek vehicle daalo!','e'); return; }
-  var saved=0, errs=[], balQ=pendingQtl(sid);
-  rows.forEach(function(row){
-    var n=row.id.replace('mdr-','');
-    var veh=(document.getElementById('md-v'+n)||{value:''}).value.trim().toUpperCase();
-    var qtl=parseFloat((document.getElementById('md-q'+n)||{value:0}).value)||0;
-    if(!veh||!qtl){ errs.push('Vehicle '+n+': No ya Qtl missing'); return; }
-    if(qtl>balQ+0.01){ errs.push('Vehicle '+n+': '+fmtD(qtl)+' Qtl — sirf '+fmtD(balQ)+' baki'); return; }
-    var id='D'+String(DATA.nD).padStart(3,'0');
-    var nd={id:id,saudaId:sid,date:date,vehicle:veh,
-      driver:(document.getElementById('md-d'+n)||{value:''}).value,
-      qtl:qtl,bags:parseInt((document.getElementById('md-b'+n)||{value:0}).value)||0,
-      gatepass:(document.getElementById('md-g'+n)||{value:''}).value,
-      status:'pending',note:''};
-    DATA.dispatches.push(nd); DATA.nD++; fbSave('dispatches',id,nd);
-    balQ-=qtl; saved++;
+
+// ------- Wrap Sauda -------
+var _audit_orig_saveSauda = saveSauda;
+saveSauda = function(){
+  if(!requireAdmin()) return;
+  var beforeIds = DATA.saude.map(function(x){return x.id;});
+  beforeIds = beforeIds.reduce(function(m,id){m[id]=true;return m;},{});
+  var beforeStateLen = DATA.saude.length;
+  _audit_orig_saveSauda();
+  if(DATA.saude.length <= beforeStateLen) return;
+  var afterNew = DATA.saude.filter(function(x){ return !beforeIds[x.id]; });
+  var g = createAuditGroupBase('Add Sauda', 'saude');
+  afterNew.forEach(function(ns){
+    g.undoOps.push({collection:'saude', id:ns.id, before:null});
   });
-  if(errs.length){ toast(errs.join(' | '),'e'); return; }
-  closeModal();
-  toast(saved+' dispatches save ho gaye!','s');
-  renderDispatch(); updHeader();
+  if(g.undoOps.length) auditWriteGroup(g);
+};
+
+var _audit_orig_updateSauda = updateSauda;
+updateSauda = function(sid){
+  if(!requireAdmin()) return;
+  var before = deepClone(getSauda(sid));
+  if(!before){ toast('Sauda not found','e'); return; }
+  _audit_orig_updateSauda(sid);
+  var g = createAuditGroupBase('Update Sauda', 'saude');
+  g.undoOps.push({collection:'saude', id:sid, before:deepClone(before)});
+  auditWriteGroup(g);
+};
+
+var _audit_orig_delSauda = delSauda;
+delSauda = function(sid){
+  if(!requireAdmin()) return;
+  var beforeS = deepClone(getSauda(sid));
+  var beforeDisps = deepClone(DATA.dispatches.filter(function(d){return d.saudaId===sid;}));
+  if(!beforeS){ toast('Sauda not found','e'); return; }
+  var g = createAuditGroupBase('Delete Sauda', 'saude');
+  _audit_orig_delSauda(sid);
+  g.undoOps.push({collection:'saude', id:sid, before:beforeS});
+  beforeDisps.forEach(function(d){
+    g.undoOps.push({collection:'dispatches', id:d.id, before:d});
+  });
+  auditWriteGroup(g);
+};
+
+// ------- Wrap Dispatch -------
+var _audit_orig_saveDispatchFor = saveDispatchFor;
+saveDispatchFor = function(sid){
+  if(!requireAdmin()) return;
+  var beforeIds = DATA.dispatches.map(function(x){return x.id;}).reduce(function(m,id){m[id]=true;return m;},{});
+  var beforeLen = DATA.dispatches.length;
+  _audit_orig_saveDispatchFor(sid);
+  if(DATA.dispatches.length <= beforeLen) return;
+  var afterNew = DATA.dispatches.filter(function(x){ return !beforeIds[x.id]; });
+  var g = createAuditGroupBase('Add Dispatch', 'dispatches');
+  afterNew.forEach(function(nd){
+    g.undoOps.push({collection:'dispatches', id:nd.id, before:null});
+  });
+  if(g.undoOps.length) auditWriteGroup(g);
+};
+
+var _audit_orig_saveNewDispatch = saveNewDispatch;
+saveNewDispatch = function(){
+  if(!requireAdmin()) return;
+  var beforeIds = DATA.dispatches.map(function(x){return x.id;}).reduce(function(m,id){m[id]=true;return m;},{});
+  var beforeLen = DATA.dispatches.length;
+  _audit_orig_saveNewDispatch();
+  if(DATA.dispatches.length <= beforeLen) return;
+  var afterNew = DATA.dispatches.filter(function(x){ return !beforeIds[x.id]; });
+  var g = createAuditGroupBase('Add Dispatch (manual)', 'dispatches');
+  afterNew.forEach(function(nd){
+    g.undoOps.push({collection:'dispatches', id:nd.id, before:null});
+  });
+  if(g.undoOps.length) auditWriteGroup(g);
+};
+
+var _audit_orig_saveEditDispatch = saveEditDispatch;
+saveEditDispatch = function(did, sid){
+  if(!requireAdmin()) return;
+  var before = deepClone(DATA.dispatches.find(function(x){return x.id===did;}));
+  _audit_orig_saveEditDispatch(did, sid);
+  if(before){
+    var g = createAuditGroupBase('Edit Dispatch', 'dispatches');
+    g.undoOps.push({collection:'dispatches', id:did, before:before});
+    auditWriteGroup(g);
+  }
+};
+
+var _audit_orig_setDispStatus = setDispStatus;
+setDispStatus = function(did, status, sid){
+  if(!requireAdmin()) return;
+  var before = deepClone(DATA.dispatches.find(function(x){return x.id===did;}));
+  _audit_orig_setDispStatus(did, status, sid);
+  if(before){
+    var g = createAuditGroupBase('Dispatch Status Change', 'dispatches');
+    g.undoOps.push({collection:'dispatches', id:did, before:before});
+    auditWriteGroup(g);
+  }
+};
+
+var _audit_orig_confirmReject = confirmReject;
+confirmReject = function(did, sid){
+  if(!requireAdmin()) return;
+  var before = deepClone(DATA.dispatches.find(function(x){return x.id===did;}));
+  _audit_orig_confirmReject(did, sid);
+  if(before){
+    var g = createAuditGroupBase('Dispatch Reject', 'dispatches');
+    g.undoOps.push({collection:'dispatches', id:did, before:before});
+    auditWriteGroup(g);
+  }
+};
+
+var _audit_orig_qPass = qPass;
+qPass = function(did){
+  if(!requireAdmin()) return;
+  var before = deepClone(DATA.dispatches.find(function(x){return x.id===did;}));
+  _audit_orig_qPass(did);
+  if(before){
+    var g = createAuditGroupBase('Dispatch Pass', 'dispatches');
+    g.undoOps.push({collection:'dispatches', id:did, before:before});
+    auditWriteGroup(g);
+  }
+};
+
+var _audit_orig_qRej = qRej;
+qRej = function(did){
+  if(!requireAdmin()) return;
+  var before = deepClone(DATA.dispatches.find(function(x){return x.id===did;}));
+  _audit_orig_qRej(did);
+  if(before){
+    var g = createAuditGroupBase('Dispatch Reject', 'dispatches');
+    g.undoOps.push({collection:'dispatches', id:did, before:before});
+    auditWriteGroup(g);
+  }
+};
+
+var _audit_orig_delDisp = delDisp;
+delDisp = function(did, sid){
+  if(!requireAdmin()) return;
+  var before = deepClone(DATA.dispatches.find(function(x){return x.id===did;}));
+  _audit_orig_delDisp(did, sid);
+  if(before){
+    var g = createAuditGroupBase('Delete Dispatch', 'dispatches');
+    g.undoOps.push({collection:'dispatches', id:did, before:before});
+    auditWriteGroup(g);
+  }
+};
+
+// ------- Wrap Parties / Brokers (add + update) -------
+var _audit_orig_saveNewParty = saveNewParty;
+saveNewParty = function(){
+  if(!requireAdmin()) return;
+  var beforeIds = DATA.parties.map(function(x){return x.id;}).reduce(function(m,id){m[id]=true;return m;},{});
+  var beforeLen = DATA.parties.length;
+  _audit_orig_saveNewParty();
+  if(DATA.parties.length <= beforeLen) return;
+  var afterNew = DATA.parties.filter(function(x){ return !beforeIds[x.id]; });
+  var g = createAuditGroupBase('Add Party', 'parties');
+  afterNew.forEach(function(np){
+    g.undoOps.push({collection:'parties', id:np.id, before:null});
+  });
+  if(g.undoOps.length) auditWriteGroup(g);
+};
+
+var _audit_orig_updateParty = updateParty;
+updateParty = function(pid){
+  if(!requireAdmin()) return;
+  var before = deepClone(getParty(pid));
+  if(!before || before.name==='-' ) return; // best effort
+  _audit_orig_updateParty(pid);
+  var g = createAuditGroupBase('Update Party', 'parties');
+  g.undoOps.push({collection:'parties', id:pid, before:deepClone(before)});
+  auditWriteGroup(g);
+};
+
+var _audit_orig_saveNewBroker = saveNewBroker;
+saveNewBroker = function(){
+  if(!requireAdmin()) return;
+  var beforeIds = DATA.brokers.map(function(x){return x.id;}).reduce(function(m,id){m[id]=true;return m;},{});
+  var beforeLen = DATA.brokers.length;
+  _audit_orig_saveNewBroker();
+  if(DATA.brokers.length <= beforeLen) return;
+  var afterNew = DATA.brokers.filter(function(x){ return !beforeIds[x.id]; });
+  var g = createAuditGroupBase('Add Broker', 'brokers');
+  afterNew.forEach(function(nb){
+    g.undoOps.push({collection:'brokers', id:nb.id, before:null});
+  });
+  if(g.undoOps.length) auditWriteGroup(g);
+};
+
+var _audit_orig_updateBroker = updateBroker;
+updateBroker = function(bid){
+  if(!requireAdmin()) return;
+  var before = deepClone(getBroker(bid));
+  if(!before || before.name==='-') return;
+  _audit_orig_updateBroker(bid);
+  var g = createAuditGroupBase('Update Broker', 'brokers');
+  g.undoOps.push({collection:'brokers', id:bid, before:deepClone(before)});
+  auditWriteGroup(g);
+};
+
+// ---------- Audit History UI ----------
+function openAuditModal(){
+  function renderRows(arr){
+    var recent = (arr||[]).slice().reverse().slice(0,80);
+    return recent.map(function(g){
+      var ts = new Date(g.ts||Date.now()).toLocaleString('en-IN');
+      return '<tr><td style="white-space:nowrap">'+ts+'</td>'
+        +'<td>'+String(g.summary||'').replace(/</g,'&lt;')+'</td>'
+        +'<td>'+String(g.entity||'').replace(/</g,'&lt;')+'</td>'
+        +'<td class="mono" style="color:var(--text3)">'+String(g.uid||'guest')+'</td></tr>';
+    }).join('');
+  }
+
+  var localList = readJsonLocal(AUDIT_LOCAL_KEY, []);
+  var tbodyRows = renderRows(localList);
+  var h='<div class="mh"><div class="mt">📜 Audit Log</div><button class="mx" onclick="closeModal()">✕</button></div>'
+    +'<div class="mb">'
+    +'<div class="ot-warning" style="margin-top:0;margin-bottom:14px">Tip: Undo local stack me hota hai. Firebase se refresh bhi karke dekha ja sakta hai.</div>'
+    +'<div class="tsc"><table class="dtable">'
+    +'<thead><tr><th>Time</th><th>Action</th><th>Entity</th><th>User</th></tr></thead>'
+    +'<tbody id="audit-tbody">'+tbodyRows+'</tbody></table></div>'
+    +'</div>';
+  openModal(h);
+
+  if(!FB_READY || !FB) return;
+  try{
+    FB.ref('mh_audit_groups').orderByChild('ts').limitToLast(80).once('value').then(function(snap){
+      var val = snap.val() || {};
+      var arr = Object.values(val).filter(Boolean);
+      var tb = document.getElementById('audit-tbody');
+      if(tb) tb.innerHTML = renderRows(arr);
+    }).catch(function(){
+      // keep local view
+    });
+  }catch(e){}
 }
 
+// ---------- CSV Import ----------
+function openImportModal(){
+  var h='<div class="mh"><div class="mt">📥 Import CSV</div><button class="mx" onclick="closeModal()">✕</button></div>'
+    +'<div class="mb">'
+    +'<div class="sec-title">Collection Select</div>'
+    +'<div class="fgrid3">'
+    +'<div class="fg2"><select class="finp" id="im-collection">'
+    +'<option value="parties" selected>Parties</option>'
+    +'<option value="brokers">Brokers</option>'
+    +'<option value="saude">Saude</option>'
+    +'<option value="dispatches">Dispatches</option>'
+    +'</select></div>'
+    +'<div class="fg2"><input type="file" class="finp" id="im-file" accept=".csv"></div>'
+    +'<div class="fg2"><button class="btn btn-blue" style="height:100%" onclick="doImportFromCsv()">Import</button></div>'
+    +'</div>'
+    +'<div class="div"></div>'
+    +'<div class="ot-warning">'
+    +'<div style="font-weight:700;margin-bottom:6px">Expected Headers</div>'
+    +'<div style="line-height:1.6">'
+    +'Parties: <span class="mono">name, city, mobile, gst</span><br>'
+    +'Brokers: <span class="mono">name, city, mobile</span><br>'
+    +'Saude: <span class="mono">date, partyId|party, brokerId|broker, qty, rate, location, notes, oneTime</span><br>'
+    +'Dispatches: <span class="mono">date, saudaId|saudaNo, vehicle, driver, qtl|mt, bags, gatepass, status, note</span>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+  openModal(h);
+}
 
+function parseCsvFile(file){
+  return new Promise(function(resolve, reject){
+    if(!file) return reject(new Error('No file'));
+    if(!window.Papa){ return reject(new Error('PapaParse not loaded')); }
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: function(h){ return String(h||'').trim(); },
+      complete: function(results){ resolve(results); },
+      error: function(err){ reject(err); }
+    });
+  });
+}
+
+function findPartyIdByRow(row){
+  var pid = row.partyId || row.party || row.partyID || '';
+  if(!pid) return null;
+  if(DATA.parties.find(function(p){ return p.id===pid; })) return pid;
+  var nm = safeLower(pid);
+  var p = DATA.parties.find(function(x){ return safeLower(x.name)===nm; });
+  return p ? p.id : null;
+}
+function findBrokerIdByRow(row){
+  var bid = row.brokerId || row.broker || row.brokerID || '';
+  if(!bid) return null;
+  if(DATA.brokers.find(function(b){ return b.id===bid; })) return bid;
+  var nm = safeLower(bid);
+  var b = DATA.brokers.find(function(x){ return safeLower(x.name)===nm; });
+  return b ? b.id : null;
+}
+function findSaudaIdByRow(row){
+  var sid = row.saudaId || row.saudaNo || row.sauda || row.saudaNoID || '';
+  if(!sid) return null;
+  if(DATA.saude.find(function(s){ return s.id===sid; })) return sid;
+  // by displayed sauda.no like "S-003"
+  var nm = safeLower(sid);
+  var s = DATA.saude.find(function(x){ return safeLower(x.no)===nm; });
+  return s ? s.id : null;
+}
+
+async function doImportFromCsv(){
+  if(!requireAdmin()) return;
+  var col = document.getElementById('im-collection').value;
+  var fileInput = document.getElementById('im-file');
+  var file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+  if(!file){ toast('CSV file select karo','e'); return; }
+
+  try{
+    var results = await parseCsvFile(file);
+    var rows = results && results.data ? results.data : [];
+    if(!rows.length){ toast('Koi CSV row nahi mila','e'); return; }
+
+    var g = createAuditGroupBase('Import CSV: '+col, col);
+    var imported = 0;
+    var skipped = 0;
+
+    if(col==='parties'){
+      rows.forEach(function(r){
+        var name = (r.name || r.Name || '').trim();
+        if(!name){ skipped++; return; }
+        var obj = {
+          id: genSafeId('P', DATA.nP++),
+          name: name,
+          city: r.city || r.City || '',
+          mobile: r.mobile || r.Mobile || '',
+          gst: r.gst || r.GST || ''
+        };
+        DATA.parties.push(obj);
+        fbSave('parties', obj.id, obj);
+        g.undoOps.push({collection:'parties', id:obj.id, before:null});
+        imported++;
+      });
+    }else if(col==='brokers'){
+      rows.forEach(function(r){
+        var name = (r.name || r.Name || '').trim();
+        if(!name){ skipped++; return; }
+        var obj = {
+          id: genSafeId('B', DATA.nB++),
+          name: name,
+          city: r.city || r.City || '',
+          mobile: r.mobile || r.Mobile || ''
+        };
+        DATA.brokers.push(obj);
+        fbSave('brokers', obj.id, obj);
+        g.undoOps.push({collection:'brokers', id:obj.id, before:null});
+        imported++;
+      });
+    }else if(col==='saude'){
+      rows.forEach(function(r){
+        var date = (r.date || r.Date || '').trim();
+        var pid = findPartyIdByRow(r);
+        var bid = findBrokerIdByRow(r);
+        var qty = parseFloat(r.qty || r.Qty || r.q || 0);
+        var rate = parseFloat(r.rate || r.Rate || 0);
+        if(!date || !pid || !bid || !qty || !rate){ skipped++; return; }
+        var obj = {
+          id: genSafeId('S', DATA.nS++),
+          no: 'S-'+String(Math.max(1, DATA.nS-1)).padStart(3,'0'),
+          date: date,
+          partyId: pid,
+          brokerId: bid,
+          qty: qty,
+          rate: rate,
+          location: r.location || r.Location || '',
+          notes: r.notes || r.Notes || '',
+          oneTime: (String(r.oneTime || r.onetime || r.one_time || '').toLowerCase()==='true' || Number(r.oneTime||r.onetime||r.one_time||0)===1)
+        };
+        DATA.saude.push(obj);
+        fbSave('saude', obj.id, obj);
+        g.undoOps.push({collection:'saude', id:obj.id, before:null});
+        imported++;
+      });
+    }else if(col==='dispatches'){
+      rows.forEach(function(r){
+        var date = (r.date || r.Date || '').trim();
+        var sid = findSaudaIdByRow(r);
+        var vehicle = (r.vehicle || r.Vehicle || '').trim().toUpperCase();
+        var driver = (r.driver || r.Driver || '').trim();
+        var qtl = null;
+        if(r.qtl!==undefined && r.qtl!=='' ) qtl = parseFloat(r.qtl);
+        if((qtl===null||isNaN(qtl)) && (r.mt!==undefined && r.mt!=='')) qtl = mtToQtl(parseFloat(r.mt));
+        if(qtl===null||isNaN(qtl)){ skipped++; return; }
+
+        var bags = parseInt(r.bags || r.Bags || 0,10) || 0;
+        var gatepass = (r.gatepass || r.Gatepass || '').trim();
+        var status = (r.status || r.Status || 'pending').toLowerCase();
+        if(['pass','pending','reject'].indexOf(status)===-1) status='pending';
+        var note = (r.note || r.Note || '').trim();
+        if(!date || !sid || !vehicle || !driver){ skipped++; return; }
+
+        var obj = {
+          id: genSafeId('D', DATA.nD++),
+          saudaId: sid,
+          date: date,
+          vehicle: vehicle,
+          driver: driver,
+          qtl: qtl,
+          bags: bags,
+          gatepass: gatepass,
+          status: status,
+          note: note
+        };
+        DATA.dispatches.push(obj);
+        fbSave('dispatches', obj.id, obj);
+        g.undoOps.push({collection:'dispatches', id:obj.id, before:null});
+        imported++;
+      });
+    }else{
+      toast('Unknown collection','e');
+      return;
+    }
+
+    if(imported){
+      closeModal();
+      g.summary = g.summary + ' (+'+imported+')';
+      auditWriteGroup(g);
+      recalcSeqFromData();
+      fillBrokerFilter();
+      fillDispatchFilters();
+      rerenderActiveTab();
+      toast('Import ho gaya: '+imported+' added, '+skipped+' skipped','s');
+    }else{
+      toast('Nothing imported. '+skipped+' skipped.','e');
+    }
+  }catch(e){
+    console.error(e);
+    toast('Import fail: '+(e&&e.message?e.message:'') ,'e');
+  }
+}
+
+// =====================================================
+// INIT — Load from Firebase, then render
+// =====================================================
+setSyncStatus('init');
+// First load local so app shows instantly, then sync from Firebase
+loadFromLocalStorage();
+recalcSeqFromData();
+renderDash();
+updateUndoButtonVisibility();
+// Then fetch latest from Firebase
+initFB();
+initAuth();
+loadAllFromFB(function(){
+  recalcSeqFromData();
+  renderDash();
+  startRealtimeListeners();
+  toast('Firebase sync complete!','s');
+});
+</script>
+</body>
+</html>
