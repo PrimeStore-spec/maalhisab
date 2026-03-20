@@ -5,23 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>📦 MaalHisab Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<!-- =====================================================
-     FIREBASE CONFIG — APNI CONFIG YAHAN PASTE KARO
-     Firebase Console > Project Settings > Your Apps > SDK setup
-     ===================================================== -->
-<script>
-var FB_CONFIG = {
-  apiKey:            "AIzaSyBhvCmZLVSOKflr7Ub_Vjhw_1CBlV2PaAI",
-  authDomain:        "primecoldstore-439ab.firebaseapp.com",
-  databaseURL:       "https://primecoldstore-439ab-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:         "primecoldstore-439ab",
-  storageBucket:     "primecoldstore-439ab.firebasestorage.app",
-  messagingSenderId: "848383603685",
-  appId:             "1:848383603685:web:7c9b45a123aa25e153f50c"
-};
-</script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<!-- Firebase config - scripts load dynamically -->
 <style>
 :root{
   --bg:#f0f2f5;--surface:#fff;--s2:#f7f8fa;--s3:#eef0f4;
@@ -185,17 +169,6 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
 <body>
 <div class="tc" id="tc"></div>
 
-<!-- LOADING SCREEN — Firebase data aane tak dikhega -->
-<div id="app-loader" style="position:fixed;inset:0;background:linear-gradient(135deg,#1a3a6b,#1a5fc8);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
-  <div style="font-size:48px">📦</div>
-  <div style="font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;color:#fff">MaalHisab Pro</div>
-  <div style="font-size:12px;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase">Data load ho raha hai...</div>
-  <div style="width:180px;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;overflow:hidden;margin-top:4px">
-    <div id="loader-bar" style="height:100%;width:0%;background:#fff;border-radius:2px;transition:width 0.4s ease;animation:ldbar 2s ease-in-out infinite"></div>
-  </div>
-  <style>@keyframes ldbar{0%{width:0%}50%{width:70%}100%{width:100%}}</style>
-</div>
-
 <div class="ov" id="main-modal" onclick="closeOut(event,'main-modal')">
   <div class="modal" id="modal-body"></div>
 </div>
@@ -257,6 +230,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <select class="fsel" id="sf-broker" onchange="renderSaude()"><option value="">Sab Brokers</option></select>
         <select class="fsel" id="sf-status" onchange="renderSaude()"><option value="">Sab Status</option><option value="complete">Complete</option><option value="partial">Partial</option><option value="pending">Pending</option></select>
+        <button class="btn btn-ghost" onclick="openImportModal()">📥 Bulk Import</button>
         <button class="btn btn-blue" onclick="openNewSauda()">＋ Naya Sauda</button>
       </div>
     </div>
@@ -275,6 +249,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
         <div class="fg-s"><span class="fl">Tarikh Se</span><input type="date" class="fi" id="df-from" onchange="renderDispatch()"></div>
         <div class="fg-s"><span class="fl">Tarikh Tak</span><input type="date" class="fi" id="df-to" onchange="renderDispatch()"></div>
         <button class="btn btn-ghost" onclick="clrDF()">✕ Clear</button>
+        <button class="btn btn-ghost" onclick="openMultiDispatch()">＋＋ Multi Dispatch</button>
         <button class="btn btn-green" onclick="openNewDispatch()">＋ Dispatch Add</button>
         <button class="btn btn-purple" onclick="openExportModal()">📥 Export</button>
       </div>
@@ -294,7 +269,10 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
   <div id="p-parties" class="hidden">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
       <div class="stl">👤 Party <span>Directory</span></div>
-      <button class="btn btn-blue" onclick="openNewParty()">＋ Naya Party</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost" onclick="openImportModal()">📥 Import</button>
+        <button class="btn btn-blue" onclick="openNewParty()">＋ Naya Party</button>
+      </div>
     </div>
     <div class="jgrid" id="parties-grid"></div>
   </div>
@@ -303,7 +281,10 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
   <div id="p-brokers" class="hidden">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
       <div class="stl">🤝 Broker <span>Management</span></div>
-      <button class="btn btn-blue" onclick="openNewBroker()">＋ Naya Broker</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost" onclick="openImportModal()">📥 Import</button>
+        <button class="btn btn-blue" onclick="openNewBroker()">＋ Naya Broker</button>
+      </div>
     </div>
     <div class="jgrid" id="brokers-grid"></div>
   </div>
@@ -743,8 +724,8 @@ function openNewSauda(){
     +'<div class="fg2"><label class="flbl">Tarikh *</label><input type="date" class="finp" id="ns-date" value="'+todayDate()+'"></div>'
     +'</div>'
     +'<div class="fgrid">'
-    +'<div class="fg2"><label class="flbl">Party *</label><select class="finp" id="ns-party"><option value="">-- Party Select Karo --</option>'+pOpts+'</select></div>'
-    +'<div class="fg2"><label class="flbl">Broker *</label><select class="finp" id="ns-broker"><option value="">-- Broker Select Karo --</option>'+bOpts+'</select></div>'
+    +'<div class="fg2"><label class="flbl">Party * <button type="button" onclick="qaParty()" style="margin-left:6px;padding:1px 8px;font-size:10px;background:var(--gbg);color:var(--green);border:1px solid var(--gb);border-radius:4px;cursor:pointer;font-weight:600">＋ Naya</button></label><select class="finp" id="ns-party"><option value="">-- Party Select Karo --</option>'+pOpts+'</select></div>'
+    +'<div class="fg2"><label class="flbl">Broker * <button type="button" onclick="qaBroker()" style="margin-left:6px;padding:1px 8px;font-size:10px;background:var(--gbg);color:var(--green);border:1px solid var(--gb);border-radius:4px;cursor:pointer;font-weight:600">＋ Naya</button></label><select class="finp" id="ns-broker"><option value="">-- Broker Select Karo --</option>'+bOpts+'</select></div>'
     +'</div>'
     +'<div class="fgrid">'
     +'<div class="fg2"><label class="flbl">Quantity (MT) *</label><input type="number" class="finp" id="ns-qty" placeholder="e.g. 100" oninput="calcNSAmt()"></div>'
@@ -1208,20 +1189,8 @@ function setSyncStatus(s){
   el.innerHTML = map[s] || map.init;
 }
 
-// Init Firebase
-function initFB(){
-  try {
-    var mhApp = firebase.apps.find(function(a){return a.name==='mhapp';}) || firebase.initializeApp(FB_CONFIG,'mhapp');
-    FB = mhApp.database();
-    FB_READY = true;
-    setSyncStatus('ok');
-    return true;
-  } catch(e) {
-    console.error('Firebase init error:', e);
-    setSyncStatus('err');
-    return false;
-  }
-}
+// initFB handled by loadFB() below
+function initFB(){ return FB_READY; }
 
 // ---- LOAD ALL DATA FROM FIREBASE ----
 function loadAllFromFB(callback){
@@ -1465,37 +1434,324 @@ updateBroker = function(bid){
 };
 
 // =====================================================
-// HIDE LOADER
 // =====================================================
-function hideLoader(){
-  var el = document.getElementById('app-loader');
-  if(el){
-    el.style.transition = 'opacity 0.4s ease';
-    el.style.opacity = '0';
-    setTimeout(function(){ el.style.display='none'; }, 400);
-  }
+// FIREBASE — Cold Store jaisi dynamic loading
+// =====================================================
+var FB_CONFIG = {
+  apiKey:            'AIzaSyBhvCmZLVSOKflr7Ub_Vjhw_1CBlV2PaAI',
+  authDomain:        'primecoldstore-439ab.firebaseapp.com',
+  databaseURL:       'https://primecoldstore-439ab-default-rtdb.asia-southeast1.firebasedatabase.app',
+  projectId:         'primecoldstore-439ab',
+  storageBucket:     'primecoldstore-439ab.firebasestorage.app',
+  messagingSenderId: '848383603685',
+  appId:             '1:848383603685:web:7c9b45a123aa25e153f50c'
+};
+
+function loadFB(){
+  return new Promise(function(res){
+    if(FB_READY){ res(); return; }
+    var s1 = document.createElement('script');
+    s1.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
+    s1.onload = function(){
+      var s2 = document.createElement('script');
+      s2.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js';
+      s2.onload = function(){
+        try{
+          var mhApp = firebase.apps.find(function(a){return a.name==='mhapp';})
+                   || firebase.initializeApp(FB_CONFIG,'mhapp');
+          FB = mhApp.database();
+          FB_READY = true;
+          setSyncStatus('ok');
+        } catch(e){
+          console.log('FB err:',e);
+          setSyncStatus('err');
+        }
+        res();
+      };
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s1);
+  });
 }
 
 // =====================================================
-// INIT — Sirf Firebase se load karo, pehle kuch render mat karo
+// INIT — Cold Store jaisa, seedha render phir Firebase
 // =====================================================
+loadFromLocalStorage();
+recalcCounters();
+renderDash();
 setSyncStatus('init');
-// Agar Firebase 5 sec mein na aaye toh local se show karo (offline fallback)
-var loaderTimeout = setTimeout(function(){
-  loadFromLocalStorage();
-  recalcCounters();
-  hideLoader();
-  renderDash();
-  setSyncStatus('offline');
-  toast('Offline mode — local data dikh raha hai','e');
-}, 5000);
 
-initFB();
-loadAllFromFB(function(){
-  clearTimeout(loaderTimeout);
-  renderDash();
-  startRealtimeListeners();
+loadFB().then(function(){
+  loadAllFromFB(function(){
+    renderDash();
+    startRealtimeListeners();
+  });
 });
-</script>
-</body>
-</html>
+// =====================================================
+// FEATURE 1: QUICK ADD PARTY / BROKER from Sauda Form
+// =====================================================
+var _sf = {};
+function _saveSF(){
+  _sf = {
+    pid:   (document.getElementById('ns-party')  ||{value:''}).value,
+    bid:   (document.getElementById('ns-broker') ||{value:''}).value,
+    qty:   (document.getElementById('ns-qty')    ||{value:''}).value,
+    rate:  (document.getElementById('ns-rate')   ||{value:''}).value,
+    loc:   (document.getElementById('ns-loc')    ||{value:''}).value,
+    notes: (document.getElementById('ns-notes')  ||{value:''}).value,
+    date:  (document.getElementById('ns-date')   ||{value:''}).value,
+    ot:    (document.getElementById('ns-onetime')||{checked:false}).checked
+  };
+}
+function _restoreSF(){
+  openNewSauda();
+  setTimeout(function(){
+    if(_sf.date)  document.getElementById('ns-date').value   = _sf.date;
+    if(_sf.qty)   document.getElementById('ns-qty').value    = _sf.qty;
+    if(_sf.rate)  document.getElementById('ns-rate').value   = _sf.rate;
+    if(_sf.loc)   document.getElementById('ns-loc').value    = _sf.loc;
+    if(_sf.notes) document.getElementById('ns-notes').value  = _sf.notes;
+    if(_sf.ot)    document.getElementById('ns-onetime').checked = _sf.ot;
+    var pid = _sf.newPid || _sf.pid;
+    var bid = _sf.newBid || _sf.bid;
+    if(pid) document.getElementById('ns-party').value  = pid;
+    if(bid) document.getElementById('ns-broker').value = bid;
+    calcNSAmt();
+  }, 150);
+}
+function qaParty(){
+  _saveSF();
+  openModal(
+    '<div class="mh"><div><div class="mt">👤 Naya Party — Quick Add</div>'
+   +'<div class="mt-sub">Party save hogi, sauda form wapas aayega</div></div>'
+   +'<button class="mx" onclick="_restoreSF()">✕</button></div>'
+   +'<div class="mb">'
+   +'<div style="background:var(--bluebg);border:1px solid #c5d8f8;border-radius:6px;padding:8px 12px;font-size:12px;color:var(--blue2);margin-bottom:12px">✅ Party add karo — sauda form ka data bachega</div>'
+   +'<div class="fg2" style="margin-bottom:11px"><label class="flbl">Party Name *</label><input class="finp" id="qp-n" placeholder="e.g. Ram Traders"></div>'
+   +'<div class="fgrid"><div class="fg2"><label class="flbl">City</label><input class="finp" id="qp-c" placeholder="Ludhiana"></div>'
+   +'<div class="fg2"><label class="flbl">Mobile</label><input class="finp" id="qp-m" placeholder="9876543210"></div></div>'
+   +'<div class="fg2"><label class="flbl">GST (optional)</label><input class="finp" id="qp-g" placeholder="03XXXXX..."></div>'
+   +'</div>'
+   +'<div class="mf"><button class="btn btn-ghost" onclick="_restoreSF()">← Wapas</button>'
+   +'<button class="btn btn-blue" onclick="saveQP()">💾 Party Save Karo</button></div>'
+  );
+}
+function saveQP(){
+  var n = (document.getElementById('qp-n')||{value:''}).value.trim();
+  if(!n){ toast('Party name zaroori hai!','e'); return; }
+  var pid = 'P'+DATA.nP;
+  var np  = {id:pid, name:n,
+    city:   (document.getElementById('qp-c')||{value:''}).value,
+    mobile: (document.getElementById('qp-m')||{value:''}).value,
+    gst:    (document.getElementById('qp-g')||{value:''}).value};
+  DATA.parties.push(np); DATA.nP++;
+  fbSave('parties', pid, np);
+  toast('Party add ho gayi!','s');
+  _sf.newPid = pid;
+  setTimeout(function(){ _restoreSF(); }, 200);
+}
+function qaBroker(){
+  _saveSF();
+  openModal(
+    '<div class="mh"><div><div class="mt">🤝 Naya Broker — Quick Add</div>'
+   +'<div class="mt-sub">Broker save hoga, sauda form wapas aayega</div></div>'
+   +'<button class="mx" onclick="_restoreSF()">✕</button></div>'
+   +'<div class="mb">'
+   +'<div style="background:var(--bluebg);border:1px solid #c5d8f8;border-radius:6px;padding:8px 12px;font-size:12px;color:var(--blue2);margin-bottom:12px">✅ Broker add karo — sauda form ka data bachega</div>'
+   +'<div class="fg2" style="margin-bottom:11px"><label class="flbl">Broker Name *</label><input class="finp" id="qb-n" placeholder="e.g. Sandeep Kumar"></div>'
+   +'<div class="fgrid"><div class="fg2"><label class="flbl">City</label><input class="finp" id="qb-c" placeholder="Ludhiana"></div>'
+   +'<div class="fg2"><label class="flbl">Mobile</label><input class="finp" id="qb-m" placeholder="9871122334"></div></div>'
+   +'</div>'
+   +'<div class="mf"><button class="btn btn-ghost" onclick="_restoreSF()">← Wapas</button>'
+   +'<button class="btn btn-blue" onclick="saveQB()">💾 Broker Save Karo</button></div>'
+  );
+}
+function saveQB(){
+  var n = (document.getElementById('qb-n')||{value:''}).value.trim();
+  if(!n){ toast('Broker name zaroori hai!','e'); return; }
+  var bid = 'B'+DATA.nB;
+  var nb  = {id:bid, name:n,
+    city:   (document.getElementById('qb-c')||{value:''}).value,
+    mobile: (document.getElementById('qb-m')||{value:''}).value};
+  DATA.brokers.push(nb); DATA.nB++;
+  fbSave('brokers', bid, nb);
+  toast('Broker add ho gaya!','s');
+  _sf.newBid = bid;
+  setTimeout(function(){ _restoreSF(); }, 200);
+}
+
+// =====================================================
+// FEATURE 2: BULK IMPORT
+// =====================================================
+function openImportModal(){
+  openModal(
+    '<div class="mh"><div class="mt">📥 Bulk Import</div><button class="mx" onclick="closeModal()">✕</button></div>'
+   +'<div class="mb">'
+   +'<div style="display:flex;gap:2px;background:var(--s3);border-radius:7px;padding:3px;margin-bottom:14px">'
+   +'<button id="it-s" onclick="siTab(\'s\')" style="flex:1;padding:7px;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;background:var(--blue);color:#fff">📄 Saude</button>'
+   +'<button id="it-p" onclick="siTab(\'p\')" style="flex:1;padding:7px;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:var(--text3)">👤 Parties</button>'
+   +'<button id="it-b" onclick="siTab(\'b\')" style="flex:1;padding:7px;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:var(--text3)">🤝 Brokers</button>'
+   +'</div>'
+   +'<div id="ic-s">'
+   +'<div style="background:var(--ybg);border:1px solid var(--yb);border-radius:6px;padding:9px 12px;font-size:11px;color:var(--yellow);margin-bottom:8px"><strong>Format (har line = 1 sauda):</strong><br><span style="font-family:monospace">Party Name, Broker Name, Qty(MT), Rate, Location, Notes, onetime(yes/no)</span><br>Agar party/broker naya ho toh apne aap ban jaayega.</div>'
+   +'<div style="font-family:monospace;font-size:11px;background:var(--s2);padding:7px 10px;border-radius:5px;margin-bottom:8px;color:var(--text2)">Ram Traders, Sandeep Kumar, 100, 2150, Delhi, COD deal, no<br>Gopal Agro, Rajesh Sharma, 50, 2200, Mumbai, , yes</div>'
+   +'<textarea class="finp" id="itxt-s" rows="6" placeholder="Yahan paste karo..." style="font-family:monospace;font-size:12px"></textarea>'
+   +'</div>'
+   +'<div id="ic-p" style="display:none">'
+   +'<div style="background:var(--ybg);border:1px solid var(--yb);border-radius:6px;padding:9px 12px;font-size:11px;color:var(--yellow);margin-bottom:8px"><strong>Format (har line = 1 party):</strong><br><span style="font-family:monospace">Party Name, City, Mobile, GST</span></div>'
+   +'<div style="font-family:monospace;font-size:11px;background:var(--s2);padding:7px 10px;border-radius:5px;margin-bottom:8px;color:var(--text2)">Ram Traders, Ludhiana, 9876543210, 03AABCU9603R1ZP<br>Shyam Enterprises, Jalandhar, 9812345678,</div>'
+   +'<textarea class="finp" id="itxt-p" rows="6" placeholder="Yahan paste karo..." style="font-family:monospace;font-size:12px"></textarea>'
+   +'</div>'
+   +'<div id="ic-b" style="display:none">'
+   +'<div style="background:var(--ybg);border:1px solid var(--yb);border-radius:6px;padding:9px 12px;font-size:11px;color:var(--yellow);margin-bottom:8px"><strong>Format (har line = 1 broker):</strong><br><span style="font-family:monospace">Broker Name, City, Mobile</span></div>'
+   +'<div style="font-family:monospace;font-size:11px;background:var(--s2);padding:7px 10px;border-radius:5px;margin-bottom:8px;color:var(--text2)">Sandeep Kumar, Ludhiana, 9871122334<br>Rajesh Sharma, Jalandhar, 9811223344</div>'
+   +'<textarea class="finp" id="itxt-b" rows="6" placeholder="Yahan paste karo..." style="font-family:monospace;font-size:12px"></textarea>'
+   +'</div>'
+   +'<div id="i-result" style="margin-top:10px"></div>'
+   +'</div>'
+   +'<div class="mf"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button>'
+   +'<button class="btn btn-blue" onclick="doImport()">📥 Import Karo</button></div>'
+  );
+}
+function siTab(t){
+  ['s','p','b'].forEach(function(x){
+    document.getElementById('ic-'+x).style.display = (x===t?'block':'none');
+    var b = document.getElementById('it-'+x);
+    b.style.background = (x===t?'var(--blue)':'transparent');
+    b.style.color      = (x===t?'#fff':'var(--text3)');
+  });
+}
+function pLine(l){ return l.split(',').map(function(x){ return x.trim(); }); }
+function doImport(){
+  var t='s';
+  if(document.getElementById('ic-p').style.display!=='none') t='p';
+  if(document.getElementById('ic-b').style.display!=='none') t='b';
+  var raw = (document.getElementById('itxt-'+t)||{value:''}).value.trim();
+  if(!raw){ toast('Kuch paste karo pehle!','e'); return; }
+  var added=0, skip=0, errs=[], today=todayDate();
+  raw.split('\n').forEach(function(line,i){
+    line=line.trim(); if(!line) return;
+    var c=pLine(line);
+    if(t==='p'){
+      var n=c[0]; if(!n){ errs.push('Line '+(i+1)+': Name missing'); return; }
+      if(DATA.parties.find(function(p){return p.name.toLowerCase()===n.toLowerCase();})){ skip++; return; }
+      var pid='P'+DATA.nP;
+      var np={id:pid,name:n,city:c[1]||'',mobile:c[2]||'',gst:c[3]||''};
+      DATA.parties.push(np); DATA.nP++; fbSave('parties',pid,np); added++;
+    } else if(t==='b'){
+      var n=c[0]; if(!n){ errs.push('Line '+(i+1)+': Name missing'); return; }
+      if(DATA.brokers.find(function(b){return b.name.toLowerCase()===n.toLowerCase();})){ skip++; return; }
+      var bid='B'+DATA.nB;
+      var nb={id:bid,name:n,city:c[1]||'',mobile:c[2]||''};
+      DATA.brokers.push(nb); DATA.nB++; fbSave('brokers',bid,nb); added++;
+    } else {
+      var pn=c[0],bn=c[1],qty=parseFloat(c[2]),rate=parseFloat(c[3]);
+      if(!pn||!bn||!qty||!rate){ errs.push('Line '+(i+1)+': Party,Broker,Qty,Rate zaroori'); return; }
+      var party=DATA.parties.find(function(p){return p.name.toLowerCase()===pn.toLowerCase();});
+      if(!party){var pid='P'+DATA.nP;party={id:pid,name:pn,city:'',mobile:'',gst:''};DATA.parties.push(party);DATA.nP++;fbSave('parties',pid,party);}
+      var broker=DATA.brokers.find(function(b){return b.name.toLowerCase()===bn.toLowerCase();});
+      if(!broker){var bid='B'+DATA.nB;broker={id:bid,name:bn,city:'',mobile:''};DATA.brokers.push(broker);DATA.nB++;fbSave('brokers',bid,broker);}
+      var sid='S'+String(DATA.nS).padStart(3,'0');
+      var ns={id:sid,no:'S-'+String(DATA.nS).padStart(3,'0'),date:today,partyId:party.id,brokerId:broker.id,qty:qty,rate:rate,location:c[4]||'',notes:c[5]||'',oneTime:(c[6]||'').toLowerCase()==='yes'};
+      DATA.saude.push(ns); DATA.nS++; fbSave('saude',sid,ns); added++;
+    }
+  });
+  if(t==='p') renderParties();
+  else if(t==='b') renderBrokers();
+  else { fillBrokerFilter(); renderSaude(); }
+  updHeader();
+  var ok=!errs.length;
+  document.getElementById('i-result').innerHTML=
+    '<div style="background:'+(ok?'var(--gbg)':'var(--rbg)')+';border:1px solid '+(ok?'var(--gb)':'var(--rb)')+';border-radius:7px;padding:10px 12px;font-size:12px">'
+   +(ok?'✅':'⚠️')+' <strong>Import Complete</strong> — Added: <strong>'+added+'</strong>, Skipped: '+skip
+   +(errs.length?'<br><span style="color:var(--red)">'+errs.join(' | ')+'</span>':'')+'</div>';
+  if(added) toast(added+' records import ho gaye!','s');
+}
+
+// =====================================================
+// FEATURE 3: MULTI DISPATCH
+// =====================================================
+var _mdN=0;
+function openMultiDispatch(){
+  _mdN=0;
+  var sOpts=DATA.saude.map(function(s){
+    return '<option value="'+s.id+'">'+s.no+' — '+getParty(s.partyId).name+' (Baki: '+fmtD(pendingQtl(s.id))+' Qtl)</option>';
+  }).join('');
+  openModal(
+    '<div class="mh"><div><div class="mt">🚚 Multi Dispatch</div>'
+   +'<div class="mt-sub">Ek saude ke liye kai vehicles ek saath add karo</div></div>'
+   +'<button class="mx" onclick="closeModal()">✕</button></div>'
+   +'<div class="mb">'
+   +'<div class="fg2" style="margin-bottom:10px"><label class="flbl">Sauda Select *</label>'
+   +'<select class="finp" id="md-sid" onchange="mdBal()">'
+   +'<option value="">-- Sauda chunein --</option>'+sOpts+'</select></div>'
+   +'<div id="md-bal" style="display:none;background:var(--bluebg);border:1px solid #c5d8f8;border-radius:6px;padding:7px 12px;font-size:12px;color:var(--blue2);margin-bottom:10px"></div>'
+   +'<div class="fg2" style="margin-bottom:12px"><label class="flbl">Date (sab ke liye)</label>'
+   +'<input type="date" class="finp" id="md-date" value="'+todayDate()+'"></div>'
+   +'<div id="md-rows"></div>'
+   +'<button class="btn btn-ghost" onclick="mdRow()" style="width:100%;margin-bottom:4px">＋ Aur Vehicle Add Karo</button>'
+   +'</div>'
+   +'<div class="mf"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button>'
+   +'<button class="btn btn-blue" onclick="mdSave()">💾 Sab Save Karo</button></div>'
+  );
+  mdRow(); mdRow();
+}
+function mdBal(){
+  var sid=document.getElementById('md-sid').value;
+  var el=document.getElementById('md-bal');
+  if(sid){ el.style.display='block'; el.innerHTML='📦 Baki: <strong>'+fmtD(pendingQtl(sid))+' Qtl</strong> / '+fmtD(qtlToMt(pendingQtl(sid)))+' MT'; }
+  else el.style.display='none';
+}
+function mdRow(){
+  _mdN++;
+  var n=_mdN;
+  var d=document.createElement('div');
+  d.id='mdr-'+n;
+  d.style.cssText='background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;margin-bottom:8px';
+  d.innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+   +'<span style="font-size:12px;font-weight:600;color:var(--blue)">Vehicle '+n+'</span>'
+   +'<button onclick="document.getElementById(\'mdr-'+n+'\').remove()" style="background:var(--rbg);color:var(--red);border:1px solid var(--rb);border-radius:4px;padding:2px 9px;font-size:11px;cursor:pointer">✕</button>'
+   +'</div>'
+   +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">'
+   +'<div class="fg2"><label class="flbl">Vehicle No *</label><input class="finp" id="md-v'+n+'" placeholder="PB10AB1234" style="text-transform:uppercase"></div>'
+   +'<div class="fg2"><label class="flbl">Driver</label><input class="finp" id="md-d'+n+'" placeholder="Driver naam"></div>'
+   +'<div class="fg2"><label class="flbl">Gatepass</label><input class="finp" id="md-g'+n+'" placeholder="GP-..."></div>'
+   +'</div>'
+   +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+   +'<div class="fg2"><label class="flbl">Quintal *</label><input type="number" class="finp" id="md-q'+n+'" placeholder="Qtl" step="0.1" oninput="var q=parseFloat(this.value)||0;document.getElementById(\'md-m'+n+'\').value=q?fmtD(qtlToMt(q)):\'\'"></div>'
+   +'<div class="fg2"><label class="flbl">MT (auto)</label><input type="number" class="finp" id="md-m'+n+'" placeholder="MT" step="0.01" oninput="var m=parseFloat(this.value)||0;document.getElementById(\'md-q'+n+'\').value=m?fmtD(mtToQtl(m)):\'\'"></div>'
+   +'<div class="fg2"><label class="flbl">Bags</label><input type="number" class="finp" id="md-b'+n+'" placeholder="Bags"></div>'
+   +'</div>';
+  document.getElementById('md-rows').appendChild(d);
+}
+function mdSave(){
+  var sid=document.getElementById('md-sid').value;
+  var date=document.getElementById('md-date').value;
+  if(!sid){ toast('Sauda select karo!','e'); return; }
+  var rows=document.querySelectorAll('[id^="mdr-"]');
+  if(!rows.length){ toast('Kam se kam ek vehicle daalo!','e'); return; }
+  var saved=0, errs=[], balQ=pendingQtl(sid);
+  rows.forEach(function(row){
+    var n=row.id.replace('mdr-','');
+    var veh=(document.getElementById('md-v'+n)||{value:''}).value.trim().toUpperCase();
+    var qtl=parseFloat((document.getElementById('md-q'+n)||{value:0}).value)||0;
+    if(!veh||!qtl){ errs.push('Vehicle '+n+': No ya Qtl missing'); return; }
+    if(qtl>balQ+0.01){ errs.push('Vehicle '+n+': '+fmtD(qtl)+' Qtl — sirf '+fmtD(balQ)+' baki'); return; }
+    var id='D'+String(DATA.nD).padStart(3,'0');
+    var nd={id:id,saudaId:sid,date:date,vehicle:veh,
+      driver:(document.getElementById('md-d'+n)||{value:''}).value,
+      qtl:qtl,bags:parseInt((document.getElementById('md-b'+n)||{value:0}).value)||0,
+      gatepass:(document.getElementById('md-g'+n)||{value:''}).value,
+      status:'pending',note:''};
+    DATA.dispatches.push(nd); DATA.nD++; fbSave('dispatches',id,nd);
+    balQ-=qtl; saved++;
+  });
+  if(errs.length){ toast(errs.join(' | '),'e'); return; }
+  closeModal();
+  toast(saved+' dispatches save ho gaye!','s');
+  renderDispatch(); updHeader();
+}
+
+
