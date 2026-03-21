@@ -8,6 +8,7 @@
 <!-- =====================================================
      FIREBASE CONFIG — APNI CONFIG YAHAN PASTE KARO
      Firebase Console > Project Settings > Your Apps > SDK setup
+     Storage: Console → Build → Storage → Rules (upload ke liye auth / rules zaroori; Blaze kabhi-kabhi chahiye)
      ===================================================== -->
 <script>
 var FB_CONFIG = {
@@ -23,6 +24,7 @@ var FB_CONFIG = {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
 :root{
@@ -243,7 +245,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
     <div class="tw" style="margin-top:16px">
       <div class="th2"><div class="ttl">🕐 Recent Dispatches</div><button class="btn btn-ghost" onclick="goTab('dispatch')">Sab Dekho →</button></div>
       <div class="tsc"><table>
-        <thead><tr><th>Tarikh</th><th>Sauda</th><th>Party</th><th>Vehicle</th><th>Driver</th><th>Quintal</th><th>MT</th><th>Bags</th><th>Gatepass</th><th>Status</th></tr></thead>
+        <thead><tr><th>Tarikh</th><th>Sauda</th><th>Party</th><th>From Firm</th><th>Vehicle</th><th>Driver</th><th>Quintal</th><th>MT</th><th>Bags</th><th>Gatepass</th><th>Docs</th><th>Status</th></tr></thead>
         <tbody id="dash-disp-tbody"></tbody>
       </table></div>
     </div>
@@ -292,7 +294,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
         <div class="ttl">🚚 Dispatch Records <span class="rcnt" id="disp-cnt">0</span></div>
       </div>
       <div class="tsc"><table>
-        <thead><tr><th>Tarikh</th><th>Sauda</th><th>Party</th><th>Broker</th><th>Vehicle No</th><th>Driver</th><th>Quintal</th><th>MT</th><th>Bags</th><th>Gatepass</th><th>Status</th><th>Note</th><th>Action</th></tr></thead>
+        <thead><tr><th>Tarikh</th><th>Sauda</th><th>Party</th><th>Broker</th><th>From Firm</th><th>Vehicle No</th><th>Driver</th><th>Quintal</th><th>MT</th><th>Bags</th><th>Gatepass</th><th>Docs</th><th>Status</th><th>Note</th><th>Action</th></tr></thead>
         <tbody id="disp-tbody"></tbody>
       </table></div>
     </div>
@@ -402,6 +404,21 @@ function saudaStatus(sid){
   if(p<tot)return{lbl:'Partial',col:'#d97706',cls:'badge-pend'};
   return{lbl:'Pending',col:'#dc2626',cls:'badge-rej'};
 }
+function renumberSaudaNos(){
+  var sorted=DATA.saude.slice().sort(function(a,b){
+    var da=a.date||'', db=b.date||'';
+    if(da!==db) return da.localeCompare(db);
+    return String(a.id).localeCompare(String(b.id));
+  });
+  sorted.forEach(function(s,i){ s.no='S-'+String(i+1).padStart(3,'0'); });
+  DATA.nS=DATA.saude.length+1;
+}
+function saudaOptionText(s,withBaki){
+  var p=getParty(s.partyId);
+  var t=s.no+' — '+p.name+' · '+fmtD(s.qty)+' MT · ₹'+fmt(s.rate)+'/MT';
+  if(withBaki) t+=' · Baki: '+fmtD(pendingQtl(s.id))+' Qtl';
+  return t;
+}
 
 // ===== TOAST =====
 function toast(msg,type){
@@ -463,21 +480,26 @@ function renderDash(){
   document.getElementById('d-value').textContent='₹'+fmt(val);
 
   var html='';
-  DATA.saude.forEach(function(s){html+=buildSaudaCard(s);});
-  document.getElementById('dash-cards').innerHTML=html||'<div class="empty"><div class="ei">📄</div><h3>Koi sauda nahi</h3></div>';
+  DATA.saude.forEach(function(s){
+    if(saudaStatus(s.id).lbl==='Complete') return;
+    html+=buildSaudaCard(s);
+  });
+  document.getElementById('dash-cards').innerHTML=html||'<div class="empty"><div class="ei">📄</div><h3>Koi active sauda nahi (Partial/Pending)</h3></div>';
 
   var recent=DATA.dispatches.slice().sort(function(a,b){return b.id.localeCompare(a.id);}).slice(0,8);
   var dhtml=recent.map(function(d){
     var s=getSauda(d.saudaId);
     return '<tr><td>'+d.date+'</td><td class="mono">'+(s?s.no:'-')+'</td><td>'+(s?getParty(s.partyId).name:'-')+'</td>'
+      +'<td style="font-size:11px;color:var(--text2)">'+(d.fromFirm||'—')+'</td>'
       +'<td class="mono" style="font-weight:700">'+d.vehicle+'</td><td>'+d.driver+'</td>'
       +'<td style="font-family:Rajdhani,sans-serif;font-weight:700">'+fmtD(d.qtl||0)+' Qtl</td>'
       +'<td style="color:var(--text3)">'+fmtD(qtlToMt(d.qtl||0))+' MT</td>'
       +'<td style="color:var(--text3)">'+fmt(d.bags||0)+'</td>'
       +'<td><span class="rtag">'+d.gatepass+'</span></td>'
+      +dispDocsCellHtml(d)
       +'<td><span class="'+getBadgeCls(d.status)+'">'+capFirst(d.status)+'</span></td></tr>';
   }).join('');
-  document.getElementById('dash-disp-tbody').innerHTML=dhtml||'<tr><td colspan="10" class="empty" style="padding:20px">Koi dispatch nahi</td></tr>';
+  document.getElementById('dash-disp-tbody').innerHTML=dhtml||'<tr><td colspan="12" class="empty" style="padding:20px">Koi dispatch nahi</td></tr>';
 }
 
 // ===== SAUDA CARD =====
@@ -538,17 +560,19 @@ function openSaudaDetail(sid){
     h+='<div class="empty" style="padding:24px"><div class="ei">🚚</div><h3>Abhi koi dispatch nahi hua</h3></div>';
   }else{
     h+='<div style="overflow-x:auto"><table class="dtable">'
-      +'<thead><tr><th>Tarikh</th><th>Vehicle No</th><th>Driver</th><th>Quintal</th><th>MT</th><th>Bags</th><th>Gatepass</th><th>Status</th><th>Note</th><th>Action</th></tr></thead><tbody>';
+      +'<thead><tr><th>Tarikh</th><th>Vehicle No</th><th>Driver</th><th>From Firm</th><th>Quintal</th><th>MT</th><th>Bags</th><th>Gatepass</th><th>Docs</th><th>Status</th><th>Note</th><th>Action</th></tr></thead><tbody>';
     disps.forEach(function(d){
       var isMinusByReject=d.status==='reject'&&s.oneTime;
       h+='<tr'+(isMinusByReject?' style="background:#fdf2f8"':'')+'>'
         +'<td>'+d.date+'</td>'
         +'<td class="mono" style="font-weight:700">'+d.vehicle+'</td>'
         +'<td>'+d.driver+'</td>'
+        +'<td style="font-size:11px;color:var(--text2);max-width:120px">'+(d.fromFirm||'—')+'</td>'
         +'<td style="font-family:Rajdhani,sans-serif;font-weight:700;font-size:14px">'+fmtD(d.qtl||0)+' Qtl</td>'
         +'<td style="color:var(--text2)">'+fmtD(qtlToMt(d.qtl||0))+' MT</td>'
         +'<td style="color:var(--text2)">'+fmt(d.bags||0)+'</td>'
         +'<td><span class="rtag">'+d.gatepass+'</span></td>'
+        +dispAttachLinksTd(d)
         +'<td><span class="'+getBadgeCls(d.status)+'">'+capFirst(d.status)+'</span>'+(isMinusByReject?'<div style="font-size:9px;color:#9d174d;margin-top:2px">⬇ Minus ho gaya</div>':'')+'</td>'
         +'<td style="color:var(--text3);font-size:11px;max-width:100px;overflow:hidden;text-overflow:ellipsis">'+(d.note||'—')+'</td>'
         +'<td><div class="ab">'
@@ -593,9 +617,154 @@ function delDisp(did,sid){
   toast('Delete ho gaya','i');openSaudaDetail(sid);updHeader();
 }
 
+// ===== DISPATCH: From Firm + attachments + search =====
+function escAttr(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+function dispatchAttachFieldsHtml(prefix,fromFirmVal){
+  var v=escAttr(fromFirmVal);
+  return '<div class="fgrid"><div class="fg2"><label class="flbl">From Firm</label><input class="finp" id="'+prefix+'-fromfirm" value="'+v+'" placeholder="Jis firm se maal aa raha hai"></div></div>'
+    +'<div class="fg2"><label class="flbl">Documents (PDF / Photo)</label>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">'
+    +'<button type="button" class="btn btn-ghost" style="font-size:12px" onclick="pickDispAtt(\''+prefix+'\',\'doc\')">📁 File / PDF</button>'
+    +'<button type="button" class="btn btn-ghost" style="font-size:12px" onclick="pickDispAtt(\''+prefix+'\',\'cam\')">📷 Camera</button>'
+    +'</div>'
+    +'<input type="file" id="'+prefix+'-file-doc" style="display:none" accept="image/*,.pdf,application/pdf" multiple onchange="onDispAttPicked(\''+prefix+'\',event)">'
+    +'<input type="file" id="'+prefix+'-file-cam" style="display:none" accept="image/*" capture="environment" onchange="onDispAttPicked(\''+prefix+'\',event)">'
+    +'<div id="'+prefix+'-att-list" style="font-size:12px;margin-top:4px"></div>'
+    +'<div style="font-size:10px;color:var(--text3);margin-top:4px">Cloud: Firebase Storage. Fail ho toh chhoti file local (base64) save.</div></div>';
+}
+var _dispAttPending={nd:[],df:[],ed:[]};
+var _edWorkingAtt=[];
+var _ndPendingSaudeList=[];
+function pickDispAtt(prefix,mode){
+  var el=document.getElementById(prefix+'-file-'+(mode==='cam'?'cam':'doc'));
+  if(el) el.click();
+}
+function onDispAttPicked(prefix,ev){
+  var files=ev&&ev.target&&ev.target.files;
+  if(!files||!files.length) return;
+  if(!_dispAttPending[prefix]) _dispAttPending[prefix]=[];
+  for(var i=0;i<files.length;i++){
+    var f=files[i];
+    if(f.size>5*1024*1024){ toast('File max 5 MB: '+f.name,'e'); continue; }
+    _dispAttPending[prefix].push({file:f,id:'pf_'+Date.now()+'_'+i+'_'+Math.random().toString(36).slice(2,8)});
+  }
+  if(prefix==='ed') renderEdAttList();
+  else renderDispAttList(prefix);
+  ev.target.value='';
+}
+function renderDispAttList(prefix){
+  var box=document.getElementById(prefix+'-att-list');
+  if(!box) return;
+  var arr=_dispAttPending[prefix]||[];
+  box.innerHTML=arr.map(function(p){
+    var n=(p.file&&p.file.name)||'file';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;background:var(--s2);border:1px solid var(--border);border-radius:5px;margin-bottom:4px">'
+      +'<span style="overflow:hidden;text-overflow:ellipsis">'+escAttr(n)+'</span>'
+      +'<button type="button" class="ab2 d" onclick="removeDispPendingAtt(\''+prefix+'\',\''+p.id+'\')">×</button></div>';
+  }).join('');
+}
+function removeDispPendingAtt(prefix,pid){
+  _dispAttPending[prefix]=(_dispAttPending[prefix]||[]).filter(function(x){return x.id!==pid;});
+  renderDispAttList(prefix);
+}
+function renderEdAttList(){
+  var box=document.getElementById('ed-att-list');
+  if(!box) return;
+  var html='';
+  _edWorkingAtt.forEach(function(a,idx){
+    var u=a.url||a.dataUrl||'#', nm=escAttr(a.name||'file');
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;background:var(--s2);border:1px solid var(--border);border-radius:5px;margin-bottom:4px">'
+      +'<a href="'+u+'" target="_blank" rel="noopener" style="color:var(--blue);overflow:hidden;text-overflow:ellipsis">📎 '+nm+'</a>'
+      +'<button type="button" class="ab2 d" onclick="removeEdSavedAtt('+idx+')">×</button></div>';
+  });
+  (_dispAttPending.ed||[]).forEach(function(p){
+    var n=(p.file&&p.file.name)||'file';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;background:var(--ybg);border:1px solid var(--yb);border-radius:5px;margin-bottom:4px">'
+      +'<span>⏳ '+escAttr(n)+'</span>'
+      +'<button type="button" class="ab2 d" onclick="removeEdPendingAtt(\''+p.id+'\')">×</button></div>';
+  });
+  box.innerHTML=html||'<span style="color:var(--text3)">Koi file nahi</span>';
+}
+function removeEdSavedAtt(i){
+  _edWorkingAtt.splice(i,1);
+  renderEdAttList();
+}
+function removeEdPendingAtt(pid){
+  _dispAttPending.ed=(_dispAttPending.ed||[]).filter(function(x){return x.id!==pid;});
+  renderEdAttList();
+}
+function readFileAsDataUrl(file,cb){
+  var r=new FileReader();
+  r.onload=function(){cb(null,r.result);};
+  r.onerror=function(){cb('err');};
+  r.readAsDataURL(file);
+}
+function uploadDispatchPendingFiles(d,prefix,cb){
+  var entries=(_dispAttPending[prefix]||[]).slice(0);
+  _dispAttPending[prefix]=[];
+  if(!entries.length){ if(cb) cb(null); return; }
+  if(!d.attachments) d.attachments=[];
+  var step=0;
+  function runOne(){
+    if(step>=entries.length){ if(cb) cb(null); return; }
+    var f=entries[step++].file;
+    if(f.size>5*1024*1024){ toast('Skip (max 5 MB): '+f.name,'e'); return runOne(); }
+    function donePush(obj){
+      d.attachments.push(obj);
+      saveToLocalStorage();
+      runOne();
+    }
+    if(FB_STORAGE){
+      var safe=String(f.name||'doc').replace(/[^\w.\-]+/g,'_').slice(0,80);
+      var path='mh_dispatch_docs/'+d.id+'/'+Date.now()+'_'+step+'_'+safe;
+      FB_STORAGE.ref(path).put(f).then(function(snap){ return snap.ref.getDownloadURL(); })
+        .then(function(url){ donePush({name:f.name||safe,url:url,contentType:f.type||'',uploadedAt:Date.now()}); })
+        .catch(function(){
+          readFileAsDataUrl(f,function(er,du){
+            if(!er&&du) donePush({name:f.name||safe,dataUrl:du,contentType:f.type||'',uploadedAt:Date.now()});
+            else runOne();
+          });
+        });
+    }else{
+      readFileAsDataUrl(f,function(er,du){
+        if(!er&&du) donePush({name:f.name||'doc',dataUrl:du,contentType:f.type||'',uploadedAt:Date.now()});
+        else runOne();
+      });
+    }
+  }
+  runOne();
+}
+function rowMatchesSaudaSearch(s,q){
+  if(!q) return true;
+  q=String(q).toLowerCase().trim();
+  var p=getParty(s.partyId);
+  var blob=[s.no,p.name,s.date,String(s.rate),String(s.qty),s.location||'',s.notes||'',saudaOptionText(s,true)].join(' ').toLowerCase();
+  return blob.indexOf(q)!==-1;
+}
+function filterNDSaudaSelect(){
+  var inp=document.getElementById('nd-sauda-q');
+  var q=inp?(inp.value||'').toLowerCase().trim():'';
+  var sel=document.getElementById('nd-sid');
+  if(!sel) return;
+  var cur=sel.value;
+  sel.innerHTML='<option value="">-- Sauda chunein --</option>';
+  (_ndPendingSaudeList||[]).forEach(function(s){
+    if(!rowMatchesSaudaSearch(s,q)) return;
+    sel.innerHTML+='<option value="'+s.id+'">'+saudaOptionText(s,true)+'</option>';
+  });
+  var ok=false;
+  for(var oi=0;oi<sel.options.length;oi++){ if(sel.options[oi].value===cur){ ok=true; break; } }
+  if(ok) sel.value=cur;
+  else { sel.value=''; updNDBalance(); }
+}
+
 // ===== EDIT DISPATCH (Change 4) =====
 function openEditDispatch(did,sid){
   var d=DATA.dispatches.find(function(x){return x.id===did;});if(!d)return;
+  _edWorkingAtt=JSON.parse(JSON.stringify(d.attachments||[]));
+  _dispAttPending.ed=[];
   var s=getSauda(sid);
   var h='<div class="mh"><div><div class="mt">✏ Dispatch Edit — '+d.vehicle+'</div>'
     +'<div class="mt-sub">'+(s?s.no:'')+' &nbsp;·&nbsp; '+d.date+'</div></div>'
@@ -620,11 +789,13 @@ function openEditDispatch(did,sid){
     +'<option value="reject"'+(d.status==='reject'?' selected':'')+'>Reject ✕</option>'
     +'</select></div>'
     +'</div>'
-    +'<div class="fg2"><label class="flbl">Note / Wajah</label><input class="finp" id="ed-note" value="'+(d.note||'')+'" placeholder="Koi wajah ya note..."></div>'
+    +'<div class="fg2"><label class="flbl">Note / Wajah</label><input class="finp" id="ed-note" value="'+escAttr(d.note||'')+'" placeholder="Koi wajah ya note..."></div>'
+    +dispatchAttachFieldsHtml('ed',d.fromFirm||'')
     +'</div>'
     +'<div class="mf"><button class="btn btn-ghost" onclick="openSaudaDetail(\''+sid+'\')">← Back</button>'
     +'<button class="btn btn-blue" onclick="saveEditDispatch(\''+did+'\',\''+sid+'\')">💾 Update Dispatch</button></div>';
   openModal(h);
+  renderEdAttList();
 }
 function calcEditDispUnit(){
   var qtl=parseFloat(document.getElementById('ed-qtl').value)||0;
@@ -634,21 +805,26 @@ function calcEditDispUnitFromMT(){
   var mt=parseFloat(document.getElementById('ed-mt').value)||0;
   document.getElementById('ed-qtl').value=fmtD(mtToQtl(mt));
 }
-function saveEditDispatch(did,sid){
+function saveEditDispatchCore(did,sid,onDone){
   var veh=document.getElementById('ed-veh').value.trim().toUpperCase();
   var qtl=parseFloat(document.getElementById('ed-qtl').value);
   if(!veh||!qtl){toast('Vehicle aur Quintal zaroori hai','e');return;}
-  DATA.dispatches.forEach(function(d){
-    if(d.id===did){
-      d.date=document.getElementById('ed-date').value;
-      d.vehicle=veh; d.driver=document.getElementById('ed-drv').value;
-      d.qtl=qtl; d.bags=parseInt(document.getElementById('ed-bags').value)||0;
-      d.gatepass=document.getElementById('ed-gp').value;
-      d.status=document.getElementById('ed-status').value;
-      d.note=document.getElementById('ed-note').value;
-    }
+  var d=DATA.dispatches.find(function(x){return x.id===did;});
+  if(!d) return;
+  d.date=document.getElementById('ed-date').value;
+  d.vehicle=veh; d.driver=document.getElementById('ed-drv').value;
+  d.qtl=qtl; d.bags=parseInt(document.getElementById('ed-bags').value)||0;
+  d.gatepass=document.getElementById('ed-gp').value;
+  d.status=document.getElementById('ed-status').value;
+  d.note=document.getElementById('ed-note').value;
+  d.fromFirm=(document.getElementById('ed-fromfirm')&&document.getElementById('ed-fromfirm').value||'').trim();
+  d.attachments=JSON.parse(JSON.stringify(_edWorkingAtt||[]));
+  uploadDispatchPendingFiles(d,'ed',function(){
+    toast('Dispatch update ho gaya!','s');
+    openSaudaDetail(sid);
+    updHeader();
+    if(onDone) onDone(d);
   });
-  toast('Dispatch update ho gaya!','s');openSaudaDetail(sid);updHeader();
 }
 
 // ===== DISPATCH FORM (Change 2: Quintal+MT+Bags) =====
@@ -677,6 +853,7 @@ function syncMTToQtl(){
 }
 
 function openDispatchFor(sid){
+  _dispAttPending.df=[];
   var s=getSauda(sid),balQ=pendingQtl(sid);
   var h='<div class="mh"><div><div class="mt">🚚 Dispatch Add — '+s.no+'</div>'
     +'<div class="mt-sub">'+getParty(s.partyId).name+' &nbsp;·&nbsp; Baki: '+fmtD(balQ)+' Qtl / '+fmtD(qtlToMt(balQ))+' MT</div></div>'
@@ -687,6 +864,7 @@ function openDispatchFor(sid){
     +'<div class="fg2"><label class="flbl">Vehicle No *</label><input class="finp" id="df-veh" placeholder="PB10AB1234" style="text-transform:uppercase"></div>'
     +'<div class="fg2"><label class="flbl">Driver Naam</label><input class="finp" id="df-drv" placeholder="Driver naam"></div>'
     +'</div>'
+    +dispatchAttachFieldsHtml('df','')
     +dispFormHtml(sid)
     +'<div class="fg2"><label class="flbl">Gatepass No</label><input class="finp" id="df-gp" placeholder="GP-..." style="margin-bottom:10px"></div>'
     +'<div class="fg2"><label class="flbl">Note</label><input class="finp" id="df-note" placeholder="Optional..."></div>'
@@ -694,25 +872,35 @@ function openDispatchFor(sid){
     +'<div class="mf"><button class="btn btn-ghost" onclick="openSaudaDetail(\''+sid+'\')">← Back</button>'
     +'<button class="btn btn-blue" onclick="saveDispatchFor(\''+sid+'\')">💾 Save Dispatch</button></div>';
   openModal(h);
+  renderDispAttList('df');
 }
-function saveDispatchFor(sid){
+function saveDispatchForCore(sid,onSaved){
   var veh=document.getElementById('df-veh').value.trim().toUpperCase();
   var qtl=parseFloat(document.getElementById('df-qtl').value);
   var balQ=pendingQtl(sid);
   if(!veh||!qtl){toast('Vehicle No aur Quintal zaroori hai','e');return;}
   if(qtl>balQ+0.01){toast('Sirf '+fmtD(balQ)+' Qtl pending hai!','e');return;}
   var id=genSafeId('D', DATA.nD);
-  DATA.dispatches.push({id:id,saudaId:sid,date:document.getElementById('df-date').value,vehicle:veh,driver:document.getElementById('df-drv').value,qtl:qtl,bags:parseInt(document.getElementById('df-bags').value)||0,gatepass:document.getElementById('df-gp').value,status:'pending',note:document.getElementById('df-note').value});
+  var fromFirm=(document.getElementById('df-fromfirm')&&document.getElementById('df-fromfirm').value||'').trim();
+  var newD={id:id,saudaId:sid,date:document.getElementById('df-date').value,vehicle:veh,driver:document.getElementById('df-drv').value,qtl:qtl,bags:parseInt(document.getElementById('df-bags').value)||0,gatepass:document.getElementById('df-gp').value,status:'pending',note:document.getElementById('df-note').value,fromFirm:fromFirm,attachments:[]};
+  DATA.dispatches.push(newD);
   DATA.nD++;
-  toast('Dispatch save ho gaya! Status: Pending','s');openSaudaDetail(sid);updHeader();
+  uploadDispatchPendingFiles(newD,'df',function(){
+    toast('Dispatch save ho gaya! Status: Pending','s');
+    openSaudaDetail(sid);
+    updHeader();
+    if(onSaved) onSaved(newD);
+  });
 }
 
 function openNewDispatch(){
+  _dispAttPending.nd=[];
   var pendingSaude=DATA.saude.filter(function(s){return pendingQtl(s.id)>0;});
-  var opts=pendingSaude.map(function(s){return '<option value="'+s.id+'">'+s.no+' — '+getParty(s.partyId).name+' (Baki: '+fmtD(pendingQtl(s.id))+' Qtl)</option>';}).join('');
+  _ndPendingSaudeList=pendingSaude;
   var h='<div class="mh"><div class="mt">🚚 Naya Dispatch Entry</div><button class="mx" onclick="closeModal()">✕</button></div>'
     +'<div class="mb">'
-    +'<div class="fg2" style="margin-bottom:14px"><label class="flbl">Sauda Select *</label><select class="finp" id="nd-sid" onchange="updNDBalance()"><option value="">-- Sauda chunein --</option>'+opts+'</select></div>'
+    +'<div class="fg2" style="margin-bottom:8px"><label class="flbl">Sauda search (No, Party, Rate, Date…)</label><input class="finp" id="nd-sauda-q" placeholder="e.g. 2025 ya party naam" oninput="filterNDSaudaSelect()"></div>'
+    +'<div class="fg2" style="margin-bottom:14px"><label class="flbl">Sauda Select *</label><select class="finp" id="nd-sid" onchange="updNDBalance()"><option value="">-- Sauda chunein --</option></select></div>'
     +'<div id="nd-bal-info" style="display:none;background:var(--bluebg);border:1px solid #c5d8f8;border-radius:6px;padding:7px 11px;font-size:12px;margin-bottom:12px;color:var(--blue2)"></div>'
     +'<div class="fgrid3">'
     +'<div class="fg2"><label class="flbl">Tarikh *</label><input type="date" class="finp" id="nd-date" value="'+todayDate()+'"></div>'
@@ -726,6 +914,7 @@ function openNewDispatch(){
     +'<div class="fg2"><label class="flbl">Bags</label><input type="number" class="finp" id="nd-bags" placeholder="Bags count"></div>'
     +'</div>'
     +'<div style="background:var(--gbg);border:1px solid var(--gb);border-radius:7px;padding:8px 12px;font-size:12px;margin-bottom:14px;color:var(--green)">ℹ 1 MT = 10 Quintal — ek mein bharo doosra auto bhar jaayega</div>'
+    +dispatchAttachFieldsHtml('nd','')
     +'<div class="fgrid">'
     +'<div class="fg2"><label class="flbl">Gatepass No</label><input class="finp" id="nd-gp" placeholder="GP-..."></div>'
     +'<div class="fg2"><label class="flbl">Note</label><input class="finp" id="nd-note" placeholder="Optional..."></div>'
@@ -733,6 +922,8 @@ function openNewDispatch(){
     +'<div class="mf"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button>'
     +'<button class="btn btn-blue" onclick="saveNewDispatch()">💾 Save Dispatch</button></div>';
   openModal(h);
+  filterNDSaudaSelect();
+  renderDispAttList('nd');
 }
 function syncNDQtlToMT(){var q=parseFloat(document.getElementById('nd-qtl').value)||0;document.getElementById('nd-mt').value=q?fmtD(qtlToMt(q)):'';}
 function syncNDMTToQtl(){var m=parseFloat(document.getElementById('nd-mt').value)||0;document.getElementById('nd-qtl').value=m?fmtD(mtToQtl(m)):'';}
@@ -742,7 +933,7 @@ function updNDBalance(){
   if(sid){var balQ=pendingQtl(sid);info.style.display='block';info.innerHTML='📦 Baki: <strong>'+fmtD(balQ)+' Quintal</strong> &nbsp;/&nbsp; '+fmtD(qtlToMt(balQ))+' MT';}
   else info.style.display='none';
 }
-function saveNewDispatch(){
+function saveNewDispatchCore(onSaved){
   var sid=document.getElementById('nd-sid').value;
   var veh=document.getElementById('nd-veh').value.trim().toUpperCase();
   var qtl=parseFloat(document.getElementById('nd-qtl').value);
@@ -750,9 +941,17 @@ function saveNewDispatch(){
   var balQ=pendingQtl(sid);
   if(qtl>balQ+0.01){toast('Sirf '+fmtD(balQ)+' Qtl pending hai!','e');return;}
   var id=genSafeId('D', DATA.nD);
-  DATA.dispatches.push({id:id,saudaId:sid,date:document.getElementById('nd-date').value,vehicle:veh,driver:document.getElementById('nd-drv').value,qtl:qtl,bags:parseInt(document.getElementById('nd-bags').value)||0,gatepass:document.getElementById('nd-gp').value,status:'pending',note:document.getElementById('nd-note').value});
+  var fromFirm=(document.getElementById('nd-fromfirm')&&document.getElementById('nd-fromfirm').value||'').trim();
+  var newD={id:id,saudaId:sid,date:document.getElementById('nd-date').value,vehicle:veh,driver:document.getElementById('nd-drv').value,qtl:qtl,bags:parseInt(document.getElementById('nd-bags').value)||0,gatepass:document.getElementById('nd-gp').value,status:'pending',note:document.getElementById('nd-note').value,fromFirm:fromFirm,attachments:[]};
+  DATA.dispatches.push(newD);
   DATA.nD++;
-  closeModal();toast('Dispatch save ho gaya!','s');renderDispatch();updHeader();
+  uploadDispatchPendingFiles(newD,'nd',function(){
+    closeModal();
+    toast('Dispatch save ho gaya!','s');
+    renderDispatch();
+    updHeader();
+    if(onSaved) onSaved(newD);
+  });
 }
 
 // ===== NEW/EDIT SAUDA =====
@@ -808,7 +1007,10 @@ function saveSauda(){
   if(!pid||!bid||!qty||!rate){toast('Party, Broker, Qty aur Rate zaroori hai!','e');return;}
   var id=genSafeId('S', DATA.nS);
   DATA.saude.push({id:id,no:'S-'+String(DATA.nS).padStart(3,'0'),date:document.getElementById('ns-date').value,partyId:pid,brokerId:bid,qty:qty,rate:rate,location:document.getElementById('ns-loc').value,notes:document.getElementById('ns-notes').value,oneTime:document.getElementById('ns-onetime').checked});
-  DATA.nS++;closeModal();toast('Sauda save ho gaya!','s');fillBrokerFilter();renderSaude();updHeader();
+  DATA.nS++;
+  renumberSaudaNos();
+  syncAllSaudeToFB();
+  closeModal();toast('Sauda save ho gaya!','s');fillBrokerFilter();renderSaude();updHeader();
 }
 function openEditSauda(sid){
   var s=getSauda(sid);if(!s)return;
@@ -845,12 +1047,16 @@ function updateSauda(sid){
   s.date=document.getElementById('es-date').value;s.partyId=document.getElementById('es-party').value;s.brokerId=document.getElementById('es-broker').value;
   s.qty=qty;s.rate=rate;s.location=document.getElementById('es-loc').value;s.notes=document.getElementById('es-notes').value;
   s.oneTime=document.getElementById('es-onetime').checked;
+  renumberSaudaNos();
+  syncAllSaudeToFB();
   toast('Sauda update ho gaya!','s');openSaudaDetail(sid);fillBrokerFilter();updHeader();
 }
 function delSauda(sid){
   if(!confirm('Sauda + saare dispatches delete ho jayenge!'))return;
   DATA.saude=DATA.saude.filter(function(x){return x.id!==sid;});
   DATA.dispatches=DATA.dispatches.filter(function(x){return x.saudaId!==sid;});
+  renumberSaudaNos();
+  syncAllSaudeToFB();
   closeModal();toast('Delete ho gaya','i');fillBrokerFilter();renderSaude();updHeader();
 }
 
@@ -890,7 +1096,7 @@ function renderSaude(){
 function fillDispatchFilters(){
   var ds=document.getElementById('df-sauda');var dv=ds.value;
   ds.innerHTML='<option value="">Sab Saude</option>';
-  DATA.saude.forEach(function(s){ds.innerHTML+='<option value="'+s.id+'">'+s.no+' — '+getParty(s.partyId).name+'</option>';});
+  DATA.saude.forEach(function(s){ds.innerHTML+='<option value="'+s.id+'">'+saudaOptionText(s,true)+'</option>';});
   ds.value=dv;
   var db=document.getElementById('df-broker');var dbv=db.value;
   db.innerHTML='<option value="">Sab Brokers</option>';
@@ -914,7 +1120,7 @@ function renderDispatch(){
     if(search){
       var p=s?getParty(s.partyId).name:'';
       var b=s?getBroker(s.brokerId).name:'';
-      var fields=[d.vehicle,d.driver,d.gatepass,(s?s.no:''),p,b].map(function(x){return String(x||'').toLowerCase().trim();});
+      var fields=[d.vehicle,d.driver,d.gatepass,(s?s.no:''),p,b,d.fromFirm||''].map(function(x){return String(x||'').toLowerCase().trim();});
       if(exact){
         if(!fields.some(function(x){return x===search;})) return false;
       }else{
@@ -930,12 +1136,14 @@ function renderDispatch(){
     return '<tr><td>'+d.date+'</td><td class="mono">'+(s?s.no:'-')+'</td>'
       +'<td>'+(s?getParty(s.partyId).name:'-')+'</td>'
       +'<td style="color:var(--text2)">'+(s?getBroker(s.brokerId).name:'-')+'</td>'
+      +'<td style="font-size:11px;color:var(--text2);max-width:100px;overflow:hidden;text-overflow:ellipsis">'+(d.fromFirm||'—')+'</td>'
       +'<td class="mono" style="font-weight:700">'+d.vehicle+'</td>'
       +'<td>'+d.driver+'</td>'
       +'<td style="font-family:Rajdhani,sans-serif;font-weight:700;font-size:13px">'+fmtD(d.qtl||0)+' Qtl</td>'
       +'<td style="color:var(--text3)">'+fmtD(qtlToMt(d.qtl||0))+' MT</td>'
       +'<td style="color:var(--text3)">'+fmt(d.bags||0)+'</td>'
       +'<td><span class="rtag">'+d.gatepass+'</span></td>'
+      +dispDocsCellHtml(d)
       +'<td><span class="'+getBadgeCls(d.status)+'">'+capFirst(d.status)+'</span></td>'
       +'<td style="color:var(--text3);font-size:11px;max-width:90px;overflow:hidden;text-overflow:ellipsis">'+(d.note||'—')+'</td>'
       +'<td><div class="ab">'
@@ -944,7 +1152,7 @@ function renderDispatch(){
       +'<button class="ab2 v" title="Detail" onclick="openSaudaDetail(\''+d.saudaId+'\')">👁</button>'
       +'</div></td></tr>';
   }).join('');
-  document.getElementById('disp-tbody').innerHTML=html||'<tr><td colspan="13" class="empty" style="padding:24px">Koi dispatch nahi mila</td></tr>';
+  document.getElementById('disp-tbody').innerHTML=html||'<tr><td colspan="15" class="empty" style="padding:24px">Koi dispatch nahi mila</td></tr>';
 }
 function clrDF(){
   ['df-s','df-from','df-to'].forEach(function(i){document.getElementById(i).value='';});
@@ -1040,6 +1248,8 @@ function delParty(pid){
   beforeDisps.forEach(function(d){ g.undoOps.push({collection:'dispatches', id:d.id, before:d}); });
   auditWriteGroup(g);
 
+  renumberSaudaNos();
+  syncAllSaudeToFB();
   toast('Party delete ho gayi','i');
   fillBrokerFilter();
   rerenderActiveTab();
@@ -1122,6 +1332,8 @@ function delBroker(bid){
   beforeDisps.forEach(function(d){ g.undoOps.push({collection:'dispatches', id:d.id, before:d}); });
   auditWriteGroup(g);
 
+  renumberSaudaNos();
+  syncAllSaudeToFB();
   toast('Broker delete ho gayi','i');
   fillBrokerFilter();
   rerenderActiveTab();
@@ -1189,6 +1401,7 @@ var ALL_FIELDS=[
   {id:'f-sauda',lbl:'Sauda No'},
   {id:'f-party',lbl:'Party Name'},
   {id:'f-broker',lbl:'Broker Name'},
+  {id:'f-from-firm',lbl:'From Firm'},
   {id:'f-rate',lbl:'Rate (₹/MT)'},
   {id:'f-vehicle',lbl:'Vehicle No'},
   {id:'f-driver',lbl:'Driver'},
@@ -1198,6 +1411,7 @@ var ALL_FIELDS=[
   {id:'f-gatepass',lbl:'Gatepass No'},
   {id:'f-status',lbl:'Status'},
   {id:'f-note',lbl:'Note / Wajah'},
+  {id:'f-docs',lbl:'Documents (links)'},
   {id:'f-location',lbl:'Delivery Location'},
   {id:'f-total-qtl',lbl:'Sauda Total Qtl'},
   {id:'f-bal-qtl',lbl:'Balance Qtl'},
@@ -1258,6 +1472,7 @@ function getRowValue(d,fid){
     'f-sauda':s?s.no:'-',
     'f-party':s?getParty(s.partyId).name:'-',
     'f-broker':s?getBroker(s.brokerId).name:'-',
+    'f-from-firm':d.fromFirm||'',
     'f-rate':s?'₹'+fmt(s.rate)+'/MT':'-',
     'f-vehicle':d.vehicle,
     'f-driver':d.driver,
@@ -1267,6 +1482,7 @@ function getRowValue(d,fid){
     'f-gatepass':d.gatepass,
     'f-status':capFirst(d.status),
     'f-note':d.note||'',
+    'f-docs':(d.attachments||[]).map(function(a){return a.url||a.dataUrl||'';}).filter(Boolean).join(' | '),
     'f-location':s?s.location:'',
     'f-total-qtl':s?fmtD(totalSaudaQtl(d.saudaId))+' Qtl':'-',
     'f-bal-qtl':s?fmtD(pendingQtl(d.saudaId))+' Qtl':'-',
@@ -1314,12 +1530,29 @@ function doExport(type){
 function getBadgeCls(s){return s==='pass'?'badge-pass':s==='reject'?'badge-rej':'badge-pend';}
 function capFirst(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
 function todayDate(){return new Date().toISOString().split('T')[0];}
+function countDispAtt(d){return d&&d.attachments&&d.attachments.length?d.attachments.length:0;}
+function dispDocsCellHtml(d){
+  var n=countDispAtt(d);
+  if(!n) return '<td style="color:var(--text3)">—</td>';
+  var a=d.attachments[0], u=a.url||a.dataUrl||'#';
+  return '<td><a href="'+u+'" target="_blank" rel="noopener" title="Open attachment">📎 '+n+'</a></td>';
+}
+function dispAttachLinksTd(d){
+  var att=d.attachments||[];
+  if(!att.length) return '<td style="color:var(--text3)">—</td>';
+  var parts=att.map(function(a,i){
+    var u=a.url||a.dataUrl||'#', nm=(a.name||'file'+(i+1)).replace(/</g,'');
+    return '<a href="'+u+'" target="_blank" rel="noopener" style="margin-right:6px;font-size:11px">📎 '+nm+'</a>';
+  });
+  return '<td style="max-width:160px;word-break:break-word">'+parts.join(' ')+'</td>';
+}
 
 // =====================================================
 // FIREBASE REALTIME DATABASE SYNC
 // =====================================================
 var FB = null;
 var FB_READY = false;
+var FB_STORAGE = null;
 var COLLECTIONS = ['saude','dispatches','parties','brokers'];
 
 function setSyncStatus(s){
@@ -1341,6 +1574,10 @@ function initFB(){
     var mhApp = firebase.apps.find(function(a){return a.name==='mhapp';}) || firebase.initializeApp(FB_CONFIG,'mhapp');
     FB = mhApp.database();
     FB_READY = true;
+    try{
+      if(firebase.storage) FB_STORAGE = firebase.storage(mhApp);
+      else FB_STORAGE = null;
+    }catch(e2){ FB_STORAGE = null; }
     setSyncStatus('ok');
     return true;
   } catch(e) {
@@ -1441,6 +1678,10 @@ function fbDelete(collection, id){
     saveToLocalStorage();
   });
 }
+function syncAllSaudeToFB(){
+  if(!FB_READY) return;
+  DATA.saude.forEach(function(s){ fbSave('saude', s.id, s); });
+}
 
 // ---- LOCAL STORAGE FALLBACK ----
 function saveToLocalStorage(){
@@ -1492,31 +1733,25 @@ delSauda = function(sid){
   disps.forEach(function(d){ fbDelete('dispatches', d.id); });
 };
 
-var _origSaveDispatchFor = saveDispatchFor;
+var _origSaveDispatchFor = saveDispatchForCore;
 saveDispatchFor = function(sid){
-  var before = DATA.dispatches.length;
-  _origSaveDispatchFor(sid);
-  if(DATA.dispatches.length > before){
-    var nd = DATA.dispatches[DATA.dispatches.length-1];
-    fbSave('dispatches', nd.id, nd);
-  }
+  saveDispatchForCore(sid, function(newD){
+    if(newD) fbSave('dispatches', newD.id, newD);
+  });
 };
 
-var _origSaveNewDispatch = saveNewDispatch;
+var _origSaveNewDispatch = saveNewDispatchCore;
 saveNewDispatch = function(){
-  var before = DATA.dispatches.length;
-  _origSaveNewDispatch();
-  if(DATA.dispatches.length > before){
-    var nd = DATA.dispatches[DATA.dispatches.length-1];
-    fbSave('dispatches', nd.id, nd);
-  }
+  saveNewDispatchCore(function(newD){
+    if(newD) fbSave('dispatches', newD.id, newD);
+  });
 };
 
-var _origSaveEditDispatch = saveEditDispatch;
+var _origSaveEditDispatch = saveEditDispatchCore;
 saveEditDispatch = function(did, sid){
-  _origSaveEditDispatch(did, sid);
-  var d = DATA.dispatches.find(function(x){return x.id===did;});
-  if(d) fbSave('dispatches', d.id, d);
+  saveEditDispatchCore(did, sid, function(d){
+    if(d) fbSave('dispatches', d.id, d);
+  });
 };
 
 var _origSetDispStatus = setDispStatus;
@@ -2187,7 +2422,7 @@ function openImportModal(){
     +'Parties: <span class="mono">name, city, mobile, gst</span><br>'
     +'Brokers: <span class="mono">name, city, mobile</span><br>'
     +'Saude: <span class="mono">date, partyId|party, brokerId|broker, qty, rate, location, notes, oneTime</span><br>'
-    +'Dispatches: <span class="mono">date, saudaId|saudaNo, vehicle, driver, qtl|mt, bags, gatepass, status, note</span>'
+    +'Dispatches: <span class="mono">date, saudaId|saudaNo, vehicle, driver, qtl|mt, bags, gatepass, status, note, fromFirm</span>'
     +'</div>'
     +'</div>'
     +'</div>';
@@ -2324,6 +2559,7 @@ async function doImportFromCsv(){
         var note = (r.note || r.Note || '').trim();
         if(!date || !sid || !vehicle || !driver){ skipped++; return; }
 
+        var fromFirmImp = (r.fromFirm || r.from_firm || r.firm || '').trim();
         var obj = {
           id: genSafeId('D', DATA.nD++),
           saudaId: sid,
@@ -2334,7 +2570,9 @@ async function doImportFromCsv(){
           bags: bags,
           gatepass: gatepass,
           status: status,
-          note: note
+          note: note,
+          fromFirm: fromFirmImp,
+          attachments: []
         };
         DATA.dispatches.push(obj);
         fbSave('dispatches', obj.id, obj);
@@ -2350,6 +2588,8 @@ async function doImportFromCsv(){
       closeModal();
       g.summary = g.summary + ' (+'+imported+')';
       auditWriteGroup(g);
+      renumberSaudaNos();
+      syncAllSaudeToFB();
       recalcSeqFromData();
       fillBrokerFilter();
       fillDispatchFilters();
@@ -2370,6 +2610,7 @@ async function doImportFromCsv(){
 setSyncStatus('init');
 // First load local so app shows instantly, then sync from Firebase
 loadFromLocalStorage();
+renumberSaudaNos();
 recalcSeqFromData();
 renderDash();
 updateUndoButtonVisibility();
@@ -2377,6 +2618,7 @@ updateUndoButtonVisibility();
 initFB();
 initAuth();
 loadAllFromFB(function(){
+  renumberSaudaNos();
   recalcSeqFromData();
   renderDash();
   startRealtimeListeners();
