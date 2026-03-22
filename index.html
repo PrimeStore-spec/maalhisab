@@ -47,7 +47,7 @@ var FB_CONFIG = {
   --sh:0 2px 10px rgba(0,0,0,0.07);--r:8px;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Noto Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;}
+body{font-family:'Noto Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;overflow-x:hidden;}
 header{position:sticky;top:0;z-index:100;background:linear-gradient(135deg,#1a3a6b,#1a5fc8);min-height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;box-shadow:0 2px 12px rgba(26,63,140,0.3);flex-wrap:wrap;gap:6px;}
 .logo{display:flex;align-items:center;gap:10px;}
 .logo-icon{width:34px;height:34px;background:rgba(255,255,255,0.2);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:18px;}
@@ -84,8 +84,8 @@ main{max-width:1600px;margin:0 auto;padding:16px 18px;}
 .th2{display:flex;justify-content:space-between;align-items:center;padding:11px 15px;border-bottom:2px solid var(--border);background:var(--s2);flex-wrap:wrap;gap:6px;}
 .ttl{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;}
 .rcnt{font-size:11px;background:var(--bluebg);border:1px solid #c5d8f8;color:var(--blue);padding:2px 9px;border-radius:20px;font-weight:600;}
-.tsc{overflow-x:auto;}
-table{width:100%;border-collapse:collapse;font-size:12px;}
+.tsc{overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;max-width:100%;}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:0;}
 thead tr{background:#f0f4fc;}
 th{padding:8px 11px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--blue2);border-bottom:2px solid #dae4f8;white-space:nowrap;}
 tbody tr{border-bottom:1px solid var(--border);transition:background 0.15s;}
@@ -189,6 +189,18 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
 .ot-warning{background:#fdf2f8;border:1px solid #fbcfe8;border-radius:7px;padding:10px 13px;font-size:12px;color:#9d174d;margin-bottom:12px;}
 @media(max-width:900px){.fgrid3,.fgrid4{grid-template-columns:1fr 1fr;}.sum-grid{grid-template-columns:1fr 1fr;}}
 @media(max-width:600px){.fgrid,.fgrid3,.fgrid4{grid-template-columns:1fr!important;}.stats-grid{grid-template-columns:1fr 1fr;}main{padding:6px;}.hdr-stat{display:none;}.tab{padding:6px 10px;font-size:12px;}.unit-box{grid-template-columns:1fr;}}
+/* Mobile: horizontal scroll sirf table wrapper mein; zyada chhoti table text */
+@media(max-width:768px){
+  header{min-height:auto;padding:8px 10px;}
+  .logo-text{font-size:17px;}
+  .tsc{border-radius:6px;border:1px solid var(--border);background:var(--surface);}
+  .tsc table{font-size:10px;}
+  .tsc th,.tsc td{padding:5px 7px;}
+  .tsc td{white-space:normal;vertical-align:top;word-break:break-word;}
+  .tsc th{white-space:normal;}
+  .jgrid{grid-template-columns:1fr!important;}
+  .th2 .ttl{font-size:13px;}
+}
 </style>
 </head>
 <body>
@@ -263,13 +275,14 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <select class="fsel" id="sf-broker" onchange="renderSaude()"><option value="">Sab Brokers</option></select>
         <select class="fsel" id="sf-status" onchange="renderSaude()"><option value="">Sab Status</option><option value="complete">Complete</option><option value="partial">Partial</option><option value="pending">Pending</option></select>
-        <input class="fi" id="sf-q" placeholder="Search: Sauda/Party/Loc/Note" oninput="renderSaude()" style="min-width:220px">
+        <input class="fi" id="sf-q" placeholder="Search: No/Party/Broker/Loc/Note/Rate" oninput="renderSaude()" style="min-width:220px">
         <input type="date" class="fi" id="sf-from" onchange="renderSaude()" style="min-width:150px">
         <input type="date" class="fi" id="sf-to" onchange="renderSaude()" style="min-width:150px">
         <label style="display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;cursor:pointer">
           <input type="checkbox" id="sf-exact" onchange="renderSaude()" style="width:16px;height:16px;accent-color:var(--blue);margin:0">
           <span style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:1px">Exact</span>
         </label>
+        <button class="btn btn-purple" onclick="exportSaudeFilteredCSV()">📥 Export CSV</button>
         <button class="btn btn-blue" onclick="openNewSauda()">＋ Naya Sauda</button>
       </div>
     </div>
@@ -281,7 +294,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
     <div class="fbox">
       <div class="ftitle">🔍 Filter & Search</div>
       <div class="fbar">
-        <div class="fg-s"><span class="fl">Search</span><input class="fi" id="df-s" placeholder="Vehicle, Party..." oninput="renderDispatch()"></div>
+        <div class="fg-s"><span class="fl">Search</span><input class="fi" id="df-s" placeholder="Vehicle, Driver, Qtl, Bags, Firm, GP, Note, Party..." oninput="renderDispatch()"></div>
         <div class="fg-s"><span class="fl">Sauda</span><select class="fsel" id="df-sauda" onchange="renderDispatch()"><option value="">Sab Saude</option></select></div>
         <div class="fg-s"><span class="fl">Broker</span><select class="fsel" id="df-broker" onchange="renderDispatch()"><option value="">Sab Brokers</option></select></div>
         <div class="fg-s"><span class="fl">Status</span><select class="fsel" id="df-status" onchange="renderDispatch()"><option value="">Sab</option><option value="pending">Pending</option><option value="pass">Pass</option><option value="reject">Reject</option></select></div>
@@ -290,7 +303,8 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
         <div class="fg-s"><span class="fl">Tarikh Tak</span><input type="date" class="fi" id="df-to" onchange="renderDispatch()"></div>
         <button class="btn btn-ghost" onclick="clrDF()">✕ Clear</button>
         <button class="btn btn-green" onclick="openNewDispatch()">＋ Dispatch Add</button>
-        <button class="btn btn-purple" onclick="openExportModal()">📥 Export</button>
+        <button class="btn btn-purple" onclick="exportDispatchFilteredCSV()">📥 CSV (filtered)</button>
+        <button class="btn btn-purple" onclick="openExportModal()">📥 Full Export</button>
         <button class="btn btn-ghost" onclick="openImportModal()">📥 Import CSV</button>
       </div>
     </div>
@@ -307,18 +321,26 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
 
   <!-- PARTIES -->
   <div id="p-parties" class="hidden">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
-      <div class="stl">👤 Party <span>Directory</span></div>
-      <button class="btn btn-blue" onclick="openNewParty()">＋ Naya Party</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;flex-wrap:wrap;gap:8px">
+      <div class="stl" style="margin:0">👤 Party <span>Directory</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex:1;justify-content:flex-end">
+        <input class="fi" id="pf-q" placeholder="Search: naam, city, mobile, GST..." oninput="renderParties()" style="min-width:180px;max-width:360px;flex:1">
+        <button class="btn btn-purple" onclick="exportPartiesCSV()">📥 Export CSV</button>
+        <button class="btn btn-blue" onclick="openNewParty()">＋ Naya Party</button>
+      </div>
     </div>
     <div class="jgrid" id="parties-grid"></div>
   </div>
 
   <!-- BROKERS -->
   <div id="p-brokers" class="hidden">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
-      <div class="stl">🤝 Broker <span>Management</span></div>
-      <button class="btn btn-blue" onclick="openNewBroker()">＋ Naya Broker</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;flex-wrap:wrap;gap:8px">
+      <div class="stl" style="margin:0">🤝 Broker <span>Management</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex:1;justify-content:flex-end">
+        <input class="fi" id="bf-q" placeholder="Search: naam, city, mobile..." oninput="renderBrokers()" style="min-width:180px;max-width:360px;flex:1">
+        <button class="btn btn-purple" onclick="exportBrokersCSV()">📥 Export CSV</button>
+        <button class="btn btn-blue" onclick="openNewBroker()">＋ Naya Broker</button>
+      </div>
     </div>
     <div class="jgrid" id="brokers-grid"></div>
   </div>
@@ -333,6 +355,10 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
       <button class="btn btn-ghost" onclick="genReport('pending')">⏳ Pending Only</button>
       <button class="btn btn-ghost" onclick="openAuditModal()">📜 Audit Log</button>
       <button class="btn btn-purple" onclick="openExportModal()">📥 Export Excel/PDF</button>
+    </div>
+    <div id="report-toolbar" class="fbox" style="display:none;margin-bottom:12px;padding:10px 12px;flex-wrap:wrap;gap:8px;align-items:center">
+      <input class="fi" id="rs-q" placeholder="Is report mein search (rows filter)..." oninput="filterReportRows()" style="min-width:200px;flex:1;max-width:420px">
+      <button class="btn btn-purple" onclick="exportReportTableCSV()">📥 Export CSV (jo dikh raha hai)</button>
     </div>
     <div id="report-out"><div class="empty"><div class="ei">📊</div><h3>Report select karo upar se</h3></div></div>
   </div>
@@ -402,6 +428,35 @@ function dispatchedQtl(sid){
 }
 function totalSaudaQtl(sid){var s=getSauda(sid);return s?s.qty*MT_TO_QTL:0;}
 function pendingQtl(sid){return Math.max(0,totalSaudaQtl(sid)-dispatchedQtl(sid));}
+
+/** Same jaisa sauda/dispatch pehle se — duplicate allow, bas confirm */
+function _dupStr(v){ return String(v==null?'':v).trim(); }
+function _dupNumEq(a,b,eps){ return Math.abs((+a||0)-(+b||0)) < (eps||0.0001); }
+function isDuplicateSaudaCandidate(o, excludeId){
+  return DATA.saude.some(function(s){
+    if(excludeId && s.id===excludeId) return false;
+    return s.date===o.date && s.partyId===o.partyId && s.brokerId===o.brokerId
+      && _dupNumEq(s.qty, o.qty) && _dupNumEq(s.rate, o.rate)
+      && _dupStr(s.location)===_dupStr(o.location)
+      && _dupStr(s.notes)===_dupStr(o.notes)
+      && !!s.oneTime===!!o.oneTime;
+  });
+}
+function isDuplicateDispatchCandidate(o, excludeId){
+  return DATA.dispatches.some(function(d){
+    if(excludeId && d.id===excludeId) return false;
+    return d.saudaId===o.saudaId && d.date===o.date
+      && _dupStr(d.vehicle).toUpperCase()===_dupStr(o.vehicle).toUpperCase()
+      && _dupNumEq(d.qtl, o.qtl, 0.001)
+      && _dupStr(d.driver)===_dupStr(o.driver)
+      && (parseInt(d.bags,10)||0)===(parseInt(o.bags,10)||0)
+      && _dupStr(d.gatepass)===_dupStr(o.gatepass)
+      && _dupStr(d.note)===_dupStr(o.note)
+      && _dupStr(d.fromFirm)===_dupStr(o.fromFirm)
+      && String(d.status||'')===String(o.status||'');
+  });
+}
+
 function saudaStatus(sid){
   var p=pendingQtl(sid),tot=totalSaudaQtl(sid);
   if(tot<=0)return{lbl:'Pending',col:'#dc2626',cls:'badge-rej'};
@@ -444,6 +499,8 @@ function closeOut(e,id){if(e.target.id===id)closeModal();}
 // ===== TABS =====
 var TABS=['dash','saude','dispatch','parties','brokers','reports'];
 function goTab(t){
+  var rt=document.getElementById('report-toolbar');
+  if(rt && t!=='reports') rt.style.display='none';
   TABS.forEach(function(x){document.getElementById('tab-'+x).classList.remove('active');document.getElementById('p-'+x).classList.add('hidden');});
   document.getElementById('tab-'+t).classList.add('active');
   document.getElementById('p-'+t).classList.remove('hidden');
@@ -816,6 +873,11 @@ function saveEditDispatchCore(did,sid,onDone){
   if(!veh||!qtl){toast('Vehicle aur Quintal zaroori hai','e');return;}
   var d=DATA.dispatches.find(function(x){return x.id===did;});
   if(!d) return;
+  var fromFirmEd=(document.getElementById('ed-fromfirm')&&document.getElementById('ed-fromfirm').value||'').trim();
+  var cand={saudaId:sid,date:document.getElementById('ed-date').value,vehicle:veh,driver:document.getElementById('ed-drv').value,qtl:qtl,bags:parseInt(document.getElementById('ed-bags').value)||0,gatepass:document.getElementById('ed-gp').value,status:document.getElementById('ed-status').value,note:document.getElementById('ed-note').value,fromFirm:fromFirmEd};
+  if(isDuplicateDispatchCandidate(cand,did)){
+    if(!confirm('⚠️ Kisi aur Dispatch jaisi same entry ban rahi hai (duplicate).\n\nPhir bhi update karna chahte ho?')) return;
+  }
   d.date=document.getElementById('ed-date').value;
   d.vehicle=veh; d.driver=document.getElementById('ed-drv').value;
   d.qtl=qtl; d.bags=parseInt(document.getElementById('ed-bags').value)||0;
@@ -885,8 +947,12 @@ function saveDispatchForCore(sid,onSaved){
   var balQ=pendingQtl(sid);
   if(!veh||!qtl){toast('Vehicle No aur Quintal zaroori hai','e');return;}
   if(qtl>balQ+0.01){toast('Sirf '+fmtD(balQ)+' Qtl pending hai!','e');return;}
-  var id=genSafeId('D', DATA.nD);
   var fromFirm=(document.getElementById('df-fromfirm')&&document.getElementById('df-fromfirm').value||'').trim();
+  var cand={saudaId:sid,date:document.getElementById('df-date').value,vehicle:veh,driver:document.getElementById('df-drv').value,qtl:qtl,bags:parseInt(document.getElementById('df-bags').value)||0,gatepass:document.getElementById('df-gp').value,status:'pending',note:document.getElementById('df-note').value,fromFirm:fromFirm};
+  if(isDuplicateDispatchCandidate(cand,null)){
+    if(!confirm('⚠️ Same jaisa Dispatch pehle se hai (duplicate).\n\nPhir bhi yeh entry save karni hai?')) return;
+  }
+  var id=genSafeId('D', DATA.nD);
   var newD={id:id,saudaId:sid,date:document.getElementById('df-date').value,vehicle:veh,driver:document.getElementById('df-drv').value,qtl:qtl,bags:parseInt(document.getElementById('df-bags').value)||0,gatepass:document.getElementById('df-gp').value,status:'pending',note:document.getElementById('df-note').value,fromFirm:fromFirm,attachments:[]};
   DATA.dispatches.push(newD);
   DATA.nD++;
@@ -945,8 +1011,12 @@ function saveNewDispatchCore(onSaved){
   if(!sid||!veh||!qtl){toast('Sauda, Vehicle aur Quintal zaroori hai','e');return;}
   var balQ=pendingQtl(sid);
   if(qtl>balQ+0.01){toast('Sirf '+fmtD(balQ)+' Qtl pending hai!','e');return;}
-  var id=genSafeId('D', DATA.nD);
   var fromFirm=(document.getElementById('nd-fromfirm')&&document.getElementById('nd-fromfirm').value||'').trim();
+  var cand={saudaId:sid,date:document.getElementById('nd-date').value,vehicle:veh,driver:document.getElementById('nd-drv').value,qtl:qtl,bags:parseInt(document.getElementById('nd-bags').value)||0,gatepass:document.getElementById('nd-gp').value,status:'pending',note:document.getElementById('nd-note').value,fromFirm:fromFirm};
+  if(isDuplicateDispatchCandidate(cand,null)){
+    if(!confirm('⚠️ Same jaisa Dispatch pehle se hai (duplicate).\n\nPhir bhi yeh entry save karni hai?')) return;
+  }
+  var id=genSafeId('D', DATA.nD);
   var newD={id:id,saudaId:sid,date:document.getElementById('nd-date').value,vehicle:veh,driver:document.getElementById('nd-drv').value,qtl:qtl,bags:parseInt(document.getElementById('nd-bags').value)||0,gatepass:document.getElementById('nd-gp').value,status:'pending',note:document.getElementById('nd-note').value,fromFirm:fromFirm,attachments:[]};
   DATA.dispatches.push(newD);
   DATA.nD++;
@@ -1010,6 +1080,9 @@ function saveSauda(){
   var pid=document.getElementById('ns-party').value,bid=document.getElementById('ns-broker').value;
   var qty=parseFloat(document.getElementById('ns-qty').value),rate=parseFloat(document.getElementById('ns-rate').value);
   if(!pid||!bid||!qty||!rate){toast('Party, Broker, Qty aur Rate zaroori hai!','e');return;}
+  if(isDuplicateSaudaCandidate({date:document.getElementById('ns-date').value,partyId:pid,brokerId:bid,qty:qty,rate:rate,location:document.getElementById('ns-loc').value,notes:document.getElementById('ns-notes').value,oneTime:document.getElementById('ns-onetime').checked},null)){
+    if(!confirm('⚠️ Same jaisa Sauda pehle se maujood hai (duplicate).\n\nPhir bhi naya Sauda create karna chahte ho?')) return;
+  }
   var id=genSafeId('S', DATA.nS);
   DATA.saude.push({id:id,no:'S-'+String(DATA.nS).padStart(3,'0'),date:document.getElementById('ns-date').value,partyId:pid,brokerId:bid,qty:qty,rate:rate,location:document.getElementById('ns-loc').value,notes:document.getElementById('ns-notes').value,oneTime:document.getElementById('ns-onetime').checked});
   DATA.nS++;
@@ -1049,6 +1122,9 @@ function updateSauda(sid){
   var s=getSauda(sid);if(!s)return;
   var qty=parseFloat(document.getElementById('es-qty').value),rate=parseFloat(document.getElementById('es-rate').value);
   if(!qty||!rate){toast('Qty aur Rate zaroori hai','e');return;}
+  if(isDuplicateSaudaCandidate({date:document.getElementById('es-date').value,partyId:document.getElementById('es-party').value,brokerId:document.getElementById('es-broker').value,qty:qty,rate:rate,location:document.getElementById('es-loc').value,notes:document.getElementById('es-notes').value,oneTime:document.getElementById('es-onetime').checked},sid)){
+    if(!confirm('⚠️ Kisi aur Sauda jaisi same entry ban rahi hai (duplicate).\n\nPhir bhi update karna chahte ho?')) return;
+  }
   s.date=document.getElementById('es-date').value;s.partyId=document.getElementById('es-party').value;s.brokerId=document.getElementById('es-broker').value;
   s.qty=qty;s.rate=rate;s.location=document.getElementById('es-loc').value;s.notes=document.getElementById('es-notes').value;
   s.oneTime=document.getElementById('es-onetime').checked;
@@ -1066,18 +1142,25 @@ function delSauda(sid){
 }
 
 // ===== SAUDE RENDER =====
+function downloadCsvFile(filename, rows){
+  var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c!=null?c:'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  var u=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=u;a.download=filename;a.click();
+  URL.revokeObjectURL(u);
+}
 function fillBrokerFilter(){
   var sel=document.getElementById('sf-broker');var val=sel.value;
   sel.innerHTML='<option value="">Sab Brokers</option>';
   DATA.brokers.forEach(function(b){sel.innerHTML+='<option value="'+b.id+'">'+b.name+'</option>';});
   sel.value=val;
 }
-function renderSaude(){
+function getFilteredSaudeList(){
   var bF=document.getElementById('sf-broker').value,sF=document.getElementById('sf-status').value;
   var q=(document.getElementById('sf-q').value||'').trim().toLowerCase();
   var fromF=document.getElementById('sf-from').value,toF=document.getElementById('sf-to').value;
   var exact=!!document.getElementById('sf-exact').checked;
-  var list=DATA.saude.filter(function(s){
+  return DATA.saude.filter(function(s){
     if(bF&&s.brokerId!==bF)return false;
     if(sF&&saudaStatus(s.id).lbl.toLowerCase()!==sF)return false;
     if(fromF&&s.date<fromF)return false;
@@ -1085,7 +1168,8 @@ function renderSaude(){
     if(q){
       var p=getParty(s.partyId).name||'';
       var b=getBroker(s.brokerId).name||'';
-      var fields=[s.no,p,b,s.location||'',s.notes||''].map(function(x){return String(x).toLowerCase();});
+      var rateStr=String(s.rate!=null?s.rate:'');
+      var fields=[s.no,p,b,s.location||'',s.notes||'',rateStr].map(function(x){return String(x).toLowerCase();});
       if(exact){
         if(!fields.some(function(x){return x===q;})) return false;
       }else{
@@ -1094,7 +1178,21 @@ function renderSaude(){
     }
     return true;
   });
+}
+function renderSaude(){
+  var list=getFilteredSaudeList();
   document.getElementById('saude-grid').innerHTML=list.map(buildSaudaCard).join('')||'<div class="empty"><div class="ei">📄</div><h3>Koi sauda nahi</h3></div>';
+}
+function exportSaudeFilteredCSV(){
+  var list=getFilteredSaudeList();
+  if(!list.length){toast('Export ke liye koi sauda nahi','e');return;}
+  var hdr=['Sauda No','Tarikh','Party','Broker','Qty MT','Rate','Location','Notes','One-Time','Status'];
+  var rows=list.map(function(s){
+    var st=saudaStatus(s.id);
+    return [s.no,s.date,getParty(s.partyId).name,getBroker(s.brokerId).name,String(s.qty),String(s.rate),s.location||'',s.notes||'',s.oneTime?'Yes':'No',st.lbl];
+  });
+  downloadCsvFile('MaalHisab_Saude_'+todayDate()+'.csv',[hdr].concat(rows));
+  toast('Sauda CSV download ho gayi!','s');
 }
 
 // ===== DISPATCH RENDER =====
@@ -1108,14 +1206,13 @@ function fillDispatchFilters(){
   DATA.brokers.forEach(function(b){db.innerHTML+='<option value="'+b.id+'">'+b.name+'</option>';});
   db.value=dbv;
 }
-function renderDispatch(){
-  var search=(document.getElementById('df-s').value||'').toLowerCase();
+function getFilteredDispatchList(){
+  var search=(document.getElementById('df-s').value||'').toLowerCase().trim();
   var saudaF=document.getElementById('df-sauda').value,statusF=document.getElementById('df-status').value;
   var brokerF=document.getElementById('df-broker').value;
   var fromF=document.getElementById('df-from').value,toF=document.getElementById('df-to').value;
   var exact=!!document.getElementById('df-exact').checked;
-  search=search.trim();
-  var list=DATA.dispatches.filter(function(d){
+  return DATA.dispatches.filter(function(d){
     if(saudaF&&d.saudaId!==saudaF)return false;
     if(statusF&&d.status!==statusF)return false;
     if(fromF&&d.date<fromF)return false;
@@ -1125,7 +1222,10 @@ function renderDispatch(){
     if(search){
       var p=s?getParty(s.partyId).name:'';
       var b=s?getBroker(s.brokerId).name:'';
-      var fields=[d.vehicle,d.driver,d.gatepass,(s?s.no:''),p,b,d.fromFirm||''].map(function(x){return String(x||'').toLowerCase().trim();});
+      var qtlStr=String(d.qtl!=null?d.qtl:'');
+      var mtStr=String(qtlToMt(d.qtl||0));
+      var bagStr=String(d.bags!=null?d.bags:'');
+      var fields=[d.vehicle,d.driver,d.gatepass,(s?s.no:''),p,b,d.fromFirm||'',d.note||'',qtlStr,mtStr,bagStr].map(function(x){return String(x||'').toLowerCase().trim();});
       if(exact){
         if(!fields.some(function(x){return x===search;})) return false;
       }else{
@@ -1135,6 +1235,20 @@ function renderDispatch(){
     }
     return true;
   }).sort(function(a,b){return b.id.localeCompare(a.id);});
+}
+function exportDispatchFilteredCSV(){
+  var list=getFilteredDispatchList();
+  if(!list.length){toast('Export ke liye koi dispatch nahi','e');return;}
+  var hdr=['Tarikh','Sauda No','Party','Broker','From Firm','Vehicle','Driver','Qtl','MT','Bags','Gatepass','Status','Note'];
+  var rows=list.map(function(d){
+    var s=getSauda(d.saudaId);
+    return [d.date,s?s.no:'',s?getParty(s.partyId).name:'',s?getBroker(s.brokerId).name:'',d.fromFirm||'',d.vehicle||'',d.driver||'',String(d.qtl||''),String(qtlToMt(d.qtl||0)),String(d.bags||''),d.gatepass||'',d.status||'',d.note||''];
+  });
+  downloadCsvFile('MaalHisab_Dispatch_'+todayDate()+'.csv',[hdr].concat(rows));
+  toast('Dispatch CSV download!','s');
+}
+function renderDispatch(){
+  var list=getFilteredDispatchList();
   document.getElementById('disp-cnt').textContent=list.length;
   var html=list.map(function(d){
     var s=getSauda(d.saudaId);
@@ -1173,8 +1287,29 @@ function qRej(did){
 }
 
 // ===== PARTIES =====
+function getFilteredPartiesList(){
+  var q=(document.getElementById('pf-q')&&document.getElementById('pf-q').value||'').trim().toLowerCase();
+  return DATA.parties.filter(function(p){
+    if(!q) return true;
+    var hay=[p.name,p.city||'',p.mobile||'',p.gst||''].join(' ').toLowerCase();
+    return hay.indexOf(q)!==-1;
+  });
+}
+function exportPartiesCSV(){
+  var list=getFilteredPartiesList();
+  if(!list.length){toast('Export ke liye koi party nahi','e');return;}
+  var hdr=['Name','City','Mobile','GST','Saude Count','Pending Qtl','Total Value ₹'];
+  var rows=list.map(function(p){
+    var ps=DATA.saude.filter(function(s){return s.partyId===p.id;});
+    var totPend=ps.reduce(function(t,s){return t+pendingQtl(s.id);},0);
+    var totAmt=ps.reduce(function(t,s){return t+s.qty*s.rate;},0);
+    return [p.name,p.city||'',p.mobile||'',p.gst||'',String(ps.length),String(totPend),String(Math.round(totAmt))];
+  });
+  downloadCsvFile('MaalHisab_Parties_'+todayDate()+'.csv',[hdr].concat(rows));
+  toast('Parties CSV download!','s');
+}
 function renderParties(){
-  var html=DATA.parties.map(function(p){
+  var html=getFilteredPartiesList().map(function(p){
     var ps=DATA.saude.filter(function(s){return s.partyId===p.id;});
     var totPend=ps.reduce(function(t,s){return t+pendingQtl(s.id);},0);
     var totAmt=ps.reduce(function(t,s){return t+s.qty*s.rate;},0);
@@ -1261,8 +1396,29 @@ function delParty(pid){
 }
 
 // ===== BROKERS =====
+function getFilteredBrokersList(){
+  var q=(document.getElementById('bf-q')&&document.getElementById('bf-q').value||'').trim().toLowerCase();
+  return DATA.brokers.filter(function(b){
+    if(!q) return true;
+    var hay=[b.name,b.city||'',b.mobile||''].join(' ').toLowerCase();
+    return hay.indexOf(q)!==-1;
+  });
+}
+function exportBrokersCSV(){
+  var list=getFilteredBrokersList();
+  if(!list.length){toast('Export ke liye koi broker nahi','e');return;}
+  var hdr=['Name','City','Mobile','Saude Count','Handled Qtl','Pending Qtl'];
+  var rows=list.map(function(b){
+    var bs=DATA.saude.filter(function(s){return s.brokerId===b.id;});
+    var totDisp=bs.reduce(function(t,s){return t+dispatchedQtl(s.id);},0);
+    var totPend=bs.reduce(function(t,s){return t+pendingQtl(s.id);},0);
+    return [b.name,b.city||'',b.mobile||'',String(bs.length),String(totDisp),String(totPend)];
+  });
+  downloadCsvFile('MaalHisab_Brokers_'+todayDate()+'.csv',[hdr].concat(rows));
+  toast('Brokers CSV download!','s');
+}
 function renderBrokers(){
-  var html=DATA.brokers.map(function(b){
+  var html=getFilteredBrokersList().map(function(b){
     var bs=DATA.saude.filter(function(s){return s.brokerId===b.id;});
     var totDisp=bs.reduce(function(t,s){return t+dispatchedQtl(s.id);},0);
     var totPend=bs.reduce(function(t,s){return t+pendingQtl(s.id);},0);
@@ -1345,7 +1501,39 @@ function delBroker(bid){
 }
 
 // ===== REPORTS =====
+function showReportToolbar(on){
+  var rt=document.getElementById('report-toolbar');
+  if(!rt) return;
+  rt.style.display=on?'flex':'none';
+  if(on){
+    var rq=document.getElementById('rs-q');
+    if(rq) rq.value='';
+  }
+}
+function filterReportRows(){
+  var q=(document.getElementById('rs-q')&&document.getElementById('rs-q').value||'').trim().toLowerCase();
+  var rows=document.querySelectorAll('#report-out tbody tr');
+  if(!rows.length) return;
+  for(var i=0;i<rows.length;i++){
+    var tr=rows[i];
+    var show=!q||tr.textContent.toLowerCase().indexOf(q)!==-1;
+    tr.style.display=show?'':'none';
+  }
+}
+function exportReportTableCSV(){
+  var table=document.querySelector('#report-out table');
+  if(!table){toast('Pehle upar se koi report generate karo','e');return;}
+  var hdr=[].slice.call(table.querySelectorAll('thead th')).map(function(th){return th.textContent.replace(/\s+/g,' ').trim();});
+  var trs=[].slice.call(table.querySelectorAll('tbody tr')).filter(function(tr){return tr.style.display!=='none';});
+  if(!trs.length){toast('Koi row nahi — filter hata kar dekho','e');return;}
+  var rows=[hdr].concat(trs.map(function(tr){
+    return [].slice.call(tr.querySelectorAll('td')).map(function(td){return td.textContent.replace(/\s+/g,' ').trim();});
+  }));
+  downloadCsvFile('MaalHisab_Report_'+todayDate()+'.csv',rows);
+  toast('Report CSV download!','s');
+}
 function genReport(type){
+  showReportToolbar(true);
   var out='';
   if(type==='sauda'){
     var rows=DATA.saude.map(function(s){
@@ -1358,7 +1546,7 @@ function genReport(type){
         +'<td>'+(s.oneTime?'<span class="flag-badge flag-ot">One-Time</span>':'Normal')+'</td>'
         +'<td><span class="'+st.cls+'">'+st.lbl+'</span></td></tr>';
     }).join('');
-    out='<div class="tw"><div class="th2"><div class="ttl">📄 Sauda-wise Report</div><button class="btn btn-purple" onclick="openExportModal()">📥 Export</button></div><div class="tsc"><table><thead><tr><th>Sauda No</th><th>Tarikh</th><th>Party</th><th>Broker</th><th>Rate</th><th>Total Qtl</th><th>Bhuta Qtl</th><th>Baki Qtl</th><th>Pending Value</th><th>Type</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+    out='<div class="tw"><div class="th2"><div class="ttl">📄 Sauda-wise Report</div><button class="btn btn-purple" onclick="openExportModal()">📥 Dispatch Export</button></div><div class="tsc"><table><thead><tr><th>Sauda No</th><th>Tarikh</th><th>Party</th><th>Broker</th><th>Rate</th><th>Total Qtl</th><th>Bhuta Qtl</th><th>Baki Qtl</th><th>Pending Value</th><th>Type</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
   }else if(type==='party'){
     var rows=DATA.parties.map(function(p){
       var ps=DATA.saude.filter(function(s){return s.partyId===p.id;});
@@ -1382,7 +1570,7 @@ function genReport(type){
     out='<div class="tw"><div class="th2"><div class="ttl">🤝 Broker-wise Report</div></div><div class="tsc"><table><thead><tr><th>Broker</th><th>City</th><th>Mobile</th><th>Saude</th><th>Handled</th><th>Pending</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
   }else if(type==='pending'){
     var list=DATA.saude.filter(function(s){return saudaStatus(s.id).lbl!=='Complete';});
-    if(!list.length){out='<div class="empty"><div class="ei">✅</div><h3>Sab saude complete hain!</h3></div>';}
+    if(!list.length){out='<div class="empty"><div class="ei">✅</div><h3>Sab saude complete hain!</h3></div>';showReportToolbar(false);}
     else{
       var rows=list.map(function(s){
         var totQ=totalSaudaQtl(s.id),disp=dispatchedQtl(s.id),bal=totQ-disp,st=saudaStatus(s.id);
@@ -1398,7 +1586,13 @@ function genReport(type){
     }
   }
   document.getElementById('report-out').innerHTML=out;
+  filterReportRows();
 }
+</think>
+
+
+<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
+Read
 
 // ===== EXPORT MODAL (Change 5) =====
 var ALL_FIELDS=[
@@ -1451,6 +1645,12 @@ function openExportModal(){
     +'<button class="btn btn-red2" onclick="doExport(\'pdf\')">📄 PDF Print</button>'
     +'</div></div>';
   openModal(h);
+  setTimeout(function(){
+    ALL_FIELDS.forEach(function(f){
+      var el=document.getElementById(f.id), lb=document.getElementById('lbl-'+f.id);
+      if(el&&lb) lb.classList.toggle('chk', el.checked);
+    });
+  },0);
 }
 function toggleField(id,lbl){setTimeout(function(){lbl.classList.toggle('chk',document.getElementById(id).checked);},0);}
 
