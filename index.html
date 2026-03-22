@@ -2,7 +2,7 @@
 <html lang="pa">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>📦 MaalHisab Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <!-- =====================================================
@@ -97,9 +97,12 @@ td{padding:8px 11px;white-space:nowrap;color:var(--text);}
 .ab2.e:hover{background:var(--bluebg);border-color:var(--blue);}
 .ab2.d:hover{background:var(--rbg);border-color:var(--red);}
 .ab2.v:hover{background:var(--gbg);border-color:var(--green);}
-.ov{display:none;position:fixed;inset:0;background:rgba(26,35,50,0.55);backdrop-filter:blur(4px);z-index:200;align-items:flex-start;justify-content:center;padding:20px 12px;overflow-y:auto;}
+.ov{display:none;position:fixed;inset:0;background:rgba(26,35,50,0.55);backdrop-filter:blur(4px);z-index:200;align-items:flex-start;justify-content:center;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
 .ov.open{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:min(800px,96vw);max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:su 0.25s cubic-bezier(0.34,1.56,0.64,1);margin:auto;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:min(800px,calc(100vw - 24px));max-width:100%;min-width:0;max-height:min(92vh,calc(100vh - 24px));overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:su 0.25s cubic-bezier(0.34,1.56,0.64,1);margin:auto;}
+@supports (height:100dvh){
+  .modal{max-height:min(92vh,min(92dvh,calc(100dvh - 24px)));}
+}
 @keyframes su{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 .mh{background:linear-gradient(135deg,#1a3a6b,#1a5fc8);padding:13px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;border-radius:10px 10px 0 0;z-index:10;}
 .mt{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:#fff;display:flex;align-items:center;gap:7px;}
@@ -205,6 +208,16 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
   .modal .dtable td.dt-firm{min-width:8rem;max-width:none;}
   .jgrid{grid-template-columns:1fr!important;}
   .th2 .ttl{font-size:13px;}
+  /* Har modal phone par: poori usable height, header/footer fixed feel, scroll .mb mein */
+  .ov{padding:max(6px,env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));align-items:stretch;justify-content:center;}
+  .modal{width:100%;max-width:100%;display:flex;flex-direction:column;overflow:hidden;margin:4px 0;max-height:calc(100vh - 12px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));align-self:center;}
+  @supports (height:100dvh){
+    .modal{max-height:calc(100dvh - 12px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));}
+  }
+  .modal .mb{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:14px 12px;}
+  .mh,.mf{flex-shrink:0;}
+  .mh{padding:11px 14px;}
+  .mf{padding:10px 12px;}
 }
 </style>
 </head>
@@ -212,7 +225,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
 <div class="tc" id="tc"></div>
 
 <div class="ov" id="main-modal" onclick="closeOut(event,'main-modal')">
-  <div class="modal" id="modal-body"></div>
+  <div class="modal" id="modal-body" onclick="event.stopPropagation()"></div>
 </div>
 
 <header>
@@ -511,8 +524,17 @@ function toast(msg,type){
 }
 
 // ===== MODAL =====
-function openModal(html){document.getElementById('modal-body').innerHTML=html;document.getElementById('main-modal').classList.add('open');}
-function closeModal(){document.getElementById('main-modal').classList.remove('open');}
+function openModal(html){
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('main-modal').classList.add('open');
+  document.documentElement.style.overflow='hidden';
+  document.body.style.overflow='hidden';
+}
+function closeModal(){
+  document.getElementById('main-modal').classList.remove('open');
+  document.documentElement.style.overflow='';
+  document.body.style.overflow='';
+}
 function closeOut(e,id){if(e.target.id===id)closeModal();}
 
 // ===== TABS =====
