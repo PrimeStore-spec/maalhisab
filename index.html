@@ -9,6 +9,11 @@
      FIREBASE CONFIG — APNI CONFIG YAHAN PASTE KARO
      Firebase Console > Project Settings > Your Apps > SDK setup
      Storage: Console → Build → Storage → Rules (upload ke liye auth / rules zaroori; Blaze kabhi-kabhi chahiye)
+     
+     LIVE DATA HAR DEVICE PAR: 
+     1. Authentication → Sign-in method → Anonymous → ENABLE karo
+     2. Realtime Database → Rules: "auth != null" allowed hai (anonymous bhi count)
+     3. File ko file:// se mat kholna — http:// se serve karo (Live Server, XAMPP, ya hosting)
      ===================================================== -->
 <script>
 var FB_CONFIG = {
@@ -1568,10 +1573,11 @@ function setSyncStatus(s){
   el.innerHTML = map[s] || map.init;
 }
 
-// Init Firebase
+// Init Firebase — MUST use default app so firebase.auth() works (auth ignores named apps like 'mhapp')
 function initFB(){
   try {
-    var mhApp = firebase.apps.find(function(a){return a.name==='mhapp';}) || firebase.initializeApp(FB_CONFIG,'mhapp');
+    var mhApp;
+    try { mhApp = firebase.app(); } catch (e0) { mhApp = firebase.initializeApp(FB_CONFIG); }
     FB = mhApp.database();
     FB_READY = true;
     try{
@@ -2606,18 +2612,36 @@ async function doImportFromCsv(){
 
 // =====================================================
 // INIT — Load from Firebase, then render
+// Har device/browser par live data ke liye Anonymous Sign-In zaroori
+// Firebase Console → Authentication → Sign-in method → Anonymous → Enable karo
 // =====================================================
+function ensureAuthThenLoad(callback){
+  if(!firebase || !firebase.auth){
+    loadAllFromFB(callback);
+    return;
+  }
+  var user = firebase.auth().currentUser;
+  if(user){
+    loadAllFromFB(callback);
+    return;
+  }
+  firebase.auth().signInAnonymously().then(function(){
+    loadAllFromFB(callback);
+  }).catch(function(e){
+    console.warn('Anonymous sign-in skip:', e&&e.message?e.message:e);
+    loadAllFromFB(callback);
+  });
+}
+
 setSyncStatus('init');
-// First load local so app shows instantly, then sync from Firebase
 loadFromLocalStorage();
 renumberSaudaNos();
 recalcSeqFromData();
 renderDash();
 updateUndoButtonVisibility();
-// Then fetch latest from Firebase
 initFB();
 initAuth();
-loadAllFromFB(function(){
+ensureAuthThenLoad(function(){
   renumberSaudaNos();
   recalcSeqFromData();
   renderDash();
