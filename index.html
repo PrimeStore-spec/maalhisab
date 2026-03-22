@@ -262,7 +262,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
     <div class="tw" style="margin-top:16px">
       <div class="th2"><div class="ttl">🕐 Recent Dispatches</div><button class="btn btn-ghost" onclick="goTab('dispatch')">Sab Dekho →</button></div>
       <div class="tsc"><table>
-        <thead><tr><th>Tarikh</th><th>Sauda</th><th>Party</th><th>From Firm</th><th>Vehicle</th><th>Driver</th><th>Quintal</th><th>MT</th><th>Bags</th><th>Gatepass</th><th>Docs</th><th>Status</th></tr></thead>
+        <thead><tr><th>Tarikh</th><th>Sauda</th><th>Party</th><th>From Firm</th><th>Vehicle</th><th>Driver</th><th>Quintal</th><th>MT</th><th>Bags</th><th>Party Wt</th><th>Gatepass</th><th>Docs</th><th>Status</th></tr></thead>
         <tbody id="dash-disp-tbody"></tbody>
       </table></div>
     </div>
@@ -313,7 +313,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
         <div class="ttl">🚚 Dispatch Records <span class="rcnt" id="disp-cnt">0</span></div>
       </div>
       <div class="tsc"><table>
-        <thead><tr><th>Tarikh</th><th>Sauda</th><th>Party</th><th>Broker</th><th>From Firm</th><th>Vehicle No</th><th>Driver</th><th>Quintal</th><th>MT</th><th>Bags</th><th>Gatepass</th><th>Docs</th><th>Status</th><th>Note</th><th>Action</th></tr></thead>
+        <thead><tr><th>Tarikh</th><th>Sauda</th><th>Party</th><th>Broker</th><th>From Firm</th><th>Vehicle No</th><th>Driver</th><th>Quintal</th><th>MT</th><th>Bags</th><th>Party Wt</th><th>Gatepass</th><th>Docs</th><th>Status</th><th>Note</th><th>Action</th></tr></thead>
         <tbody id="disp-tbody"></tbody>
       </table></div>
     </div>
@@ -427,7 +427,17 @@ function dispatchedQtl(sid){
   }).reduce(function(t,d){return t+(d.qtl||0);},0);
 }
 function totalSaudaQtl(sid){var s=getSauda(sid);return s?s.qty*MT_TO_QTL:0;}
-function pendingQtl(sid){return Math.max(0,totalSaudaQtl(sid)-dispatchedQtl(sid));}
+function pendingQtl(sid){
+  var s=getSauda(sid);
+  if(s && s.manualComplete) return 0;
+  return Math.max(0,totalSaudaQtl(sid)-dispatchedQtl(sid));
+}
+function readPartyWeightById(id){
+  var el=document.getElementById(id);
+  if(!el) return 0;
+  var v=parseFloat(el.value);
+  return isNaN(v)?0:v;
+}
 
 /** Same jaisa sauda/dispatch pehle se — duplicate allow, bas confirm */
 function _dupStr(v){ return String(v==null?'':v).trim(); }
@@ -439,7 +449,8 @@ function isDuplicateSaudaCandidate(o, excludeId){
       && _dupNumEq(s.qty, o.qty) && _dupNumEq(s.rate, o.rate)
       && _dupStr(s.location)===_dupStr(o.location)
       && _dupStr(s.notes)===_dupStr(o.notes)
-      && !!s.oneTime===!!o.oneTime;
+      && !!s.oneTime===!!o.oneTime
+      && !!s.manualComplete===!!o.manualComplete;
   });
 }
 function isDuplicateDispatchCandidate(o, excludeId){
@@ -453,11 +464,14 @@ function isDuplicateDispatchCandidate(o, excludeId){
       && _dupStr(d.gatepass)===_dupStr(o.gatepass)
       && _dupStr(d.note)===_dupStr(o.note)
       && _dupStr(d.fromFirm)===_dupStr(o.fromFirm)
+      && _dupNumEq(d.partyWeight||0, o.partyWeight||0, 0.001)
       && String(d.status||'')===String(o.status||'');
   });
 }
 
 function saudaStatus(sid){
+  var s=getSauda(sid);
+  if(s && s.manualComplete) return{lbl:'Complete',col:'#16a34a',cls:'badge-pass'};
   var p=pendingQtl(sid),tot=totalSaudaQtl(sid);
   if(tot<=0)return{lbl:'Pending',col:'#dc2626',cls:'badge-rej'};
   if(p<=0)return{lbl:'Complete',col:'#16a34a',cls:'badge-pass'};
@@ -557,11 +571,12 @@ function renderDash(){
       +'<td style="font-family:Rajdhani,sans-serif;font-weight:700">'+fmtD(d.qtl||0)+' Qtl</td>'
       +'<td style="color:var(--text3)">'+fmtD(qtlToMt(d.qtl||0))+' MT</td>'
       +'<td style="color:var(--text3)">'+fmt(d.bags||0)+'</td>'
+      +'<td style="color:var(--text3);font-size:11px">'+(d.partyWeight!=null&&d.partyWeight!==''?fmtD(d.partyWeight):'—')+'</td>'
       +'<td><span class="rtag">'+d.gatepass+'</span></td>'
       +dispDocsCellHtml(d)
       +'<td><span class="'+getBadgeCls(d.status)+'">'+capFirst(d.status)+'</span></td></tr>';
   }).join('');
-  document.getElementById('dash-disp-tbody').innerHTML=dhtml||'<tr><td colspan="12" class="empty" style="padding:20px">Koi dispatch nahi</td></tr>';
+  document.getElementById('dash-disp-tbody').innerHTML=dhtml||'<tr><td colspan="13" class="empty" style="padding:20px">Koi dispatch nahi</td></tr>';
 }
 
 // ===== SAUDA CARD =====
@@ -602,6 +617,7 @@ function openSaudaDetail(sid){
     +'<button class="mx" onclick="closeModal()">✕</button></div>'
     +'<div class="mb">'
     +(s.oneTime?'<div class="ot-warning">🔔 <strong>One-Time Delivery Sauda:</strong> Is saude mein reject ho jaane ke baad bhi quantity minus ho jaayegi — balance kam ho jaayega.</div>':'')
+    +(s.manualComplete?'<div style="background:var(--gbg);border:1px solid var(--gb);border-radius:7px;padding:8px 12px;font-size:12px;color:#166534;margin-bottom:12px">✅ <strong>Manual complete:</strong> Is saude ko deal band maana gaya hai — status complete, baki 0.</div>':'')
     +'<div class="fgrid4" style="margin-bottom:14px">'
     +'<div class="jst" style="padding:10px 12px"><div class="jsv" style="color:var(--blue);font-size:20px">₹'+fmt(s.rate)+'</div><div class="jsl">Rate / MT</div></div>'
     +'<div class="jst" style="padding:10px 12px"><div class="jsv" style="font-size:18px">'+fmtD(totQtl)+' Qtl</div><div class="jsl">Total Qty</div><div style="font-size:10px;color:var(--text3)">'+fmtD(s.qty)+' MT &nbsp;·&nbsp; ₹'+fmt(s.qty*s.rate)+'</div></div>'
@@ -622,7 +638,7 @@ function openSaudaDetail(sid){
     h+='<div class="empty" style="padding:24px"><div class="ei">🚚</div><h3>Abhi koi dispatch nahi hua</h3></div>';
   }else{
     h+='<div style="overflow-x:auto"><table class="dtable">'
-      +'<thead><tr><th>Tarikh</th><th>Vehicle No</th><th>Driver</th><th>From Firm</th><th>Quintal</th><th>MT</th><th>Bags</th><th>Gatepass</th><th>Docs</th><th>Status</th><th>Note</th><th>Action</th></tr></thead><tbody>';
+      +'<thead><tr><th>Tarikh</th><th>Vehicle No</th><th>Driver</th><th>From Firm</th><th>Quintal</th><th>MT</th><th>Bags</th><th>Party Wt</th><th>Gatepass</th><th>Docs</th><th>Status</th><th>Note</th><th>Action</th></tr></thead><tbody>';
     disps.forEach(function(d){
       var isMinusByReject=d.status==='reject'&&s.oneTime;
       h+='<tr'+(isMinusByReject?' style="background:#fdf2f8"':'')+'>'
@@ -633,6 +649,7 @@ function openSaudaDetail(sid){
         +'<td style="font-family:Rajdhani,sans-serif;font-weight:700;font-size:14px">'+fmtD(d.qtl||0)+' Qtl</td>'
         +'<td style="color:var(--text2)">'+fmtD(qtlToMt(d.qtl||0))+' MT</td>'
         +'<td style="color:var(--text2)">'+fmt(d.bags||0)+'</td>'
+        +'<td style="color:var(--text2);font-size:11px">'+(d.partyWeight!=null&&d.partyWeight!==''?fmtD(d.partyWeight):'—')+'</td>'
         +'<td><span class="rtag">'+d.gatepass+'</span></td>'
         +dispAttachLinksTd(d)
         +'<td><span class="'+getBadgeCls(d.status)+'">'+capFirst(d.status)+'</span>'+(isMinusByReject?'<div style="font-size:9px;color:#9d174d;margin-top:2px">⬇ Minus ho gaya</div>':'')+'</td>'
@@ -843,6 +860,7 @@ function openEditDispatch(did,sid){
     +'<div class="fg2"><label class="flbl">MT (Auto)</label><input type="number" class="finp" id="ed-mt" value="'+fmtD(qtlToMt(d.qtl||0))+'" step="0.01" oninput="calcEditDispUnitFromMT()" placeholder="MT"></div>'
     +'<div class="fg2"><label class="flbl">Bags</label><input type="number" class="finp" id="ed-bags" value="'+(d.bags||0)+'" placeholder="Bags"></div>'
     +'</div>'
+    +'<div class="fgrid"><div class="fg2 full"><label class="flbl">Party Weight (Qtl)</label><input type="number" step="0.01" class="finp" id="ed-partyweight" value="'+(d.partyWeight!=null&&d.partyWeight!==''?d.partyWeight:'')+'" placeholder="Optional"></div></div>'
     +'<div class="fgrid">'
     +'<div class="fg2"><label class="flbl">Gatepass No</label><input class="finp" id="ed-gp" value="'+d.gatepass+'"></div>'
     +'<div class="fg2"><label class="flbl">Status</label><select class="finp" id="ed-status">'
@@ -873,8 +891,16 @@ function saveEditDispatchCore(did,sid,onDone){
   if(!veh||!qtl){toast('Vehicle aur Quintal zaroori hai','e');return;}
   var d=DATA.dispatches.find(function(x){return x.id===did;});
   if(!d) return;
+  var oldQ=d.qtl||0;
+  var balQ=pendingQtl(sid);
+  var maxAllowed=balQ+oldQ;
+  if(qtl>maxAllowed+0.01){
+    var extra=qtl-maxAllowed;
+    if(!confirm('⚠️ Weight — zyada dispatch (edit)\n\nIs dispatch ki purani Qtl: '+fmtD(oldQ)+'\nAb max (baki + purani): '+fmtD(maxAllowed)+' Qtl\nNayi Qtl: '+fmtD(qtl)+'\n\n'+fmtD(extra)+' Qtl zyada.\n\nPhir bhi save karna hai?')) return;
+  }
+  var pw=readPartyWeightById('ed-partyweight');
   var fromFirmEd=(document.getElementById('ed-fromfirm')&&document.getElementById('ed-fromfirm').value||'').trim();
-  var cand={saudaId:sid,date:document.getElementById('ed-date').value,vehicle:veh,driver:document.getElementById('ed-drv').value,qtl:qtl,bags:parseInt(document.getElementById('ed-bags').value)||0,gatepass:document.getElementById('ed-gp').value,status:document.getElementById('ed-status').value,note:document.getElementById('ed-note').value,fromFirm:fromFirmEd};
+  var cand={saudaId:sid,date:document.getElementById('ed-date').value,vehicle:veh,driver:document.getElementById('ed-drv').value,qtl:qtl,bags:parseInt(document.getElementById('ed-bags').value)||0,gatepass:document.getElementById('ed-gp').value,status:document.getElementById('ed-status').value,note:document.getElementById('ed-note').value,fromFirm:fromFirmEd,partyWeight:pw};
   if(isDuplicateDispatchCandidate(cand,did)){
     if(!confirm('⚠️ Kisi aur Dispatch jaisi same entry ban rahi hai (duplicate).\n\nPhir bhi update karna chahte ho?')) return;
   }
@@ -885,6 +911,7 @@ function saveEditDispatchCore(did,sid,onDone){
   d.status=document.getElementById('ed-status').value;
   d.note=document.getElementById('ed-note').value;
   d.fromFirm=(document.getElementById('ed-fromfirm')&&document.getElementById('ed-fromfirm').value||'').trim();
+  d.partyWeight=pw;
   d.attachments=JSON.parse(JSON.stringify(_edWorkingAtt||[]));
   uploadDispatchPendingFiles(d,'ed',function(){
     toast('Dispatch update ho gaya!','s');
@@ -901,7 +928,7 @@ function dispFormHtml(sid, backFn, saveFn, prefill){
   var pf=prefill||{};
   return '<div class="sec-title">📦 Quantity (Ek mein bharo — baaki auto calculate)</div>'
     +'<div class="fgrid3">'
-    +'<div class="fg2"><label class="flbl">Quintal * (Max: '+fmtD(balQ)+')</label>'
+    +'<div class="fg2"><label class="flbl">Quintal * (Baki guideline: '+fmtD(balQ)+' Qtl — zyada par confirm)</label>'
     +'<input type="number" class="finp" id="df-qtl" value="'+(pf.qtl||'')+'" step="0.1" placeholder="e.g. 100" oninput="syncQtlToMT()"></div>'
     +'<div class="fg2"><label class="flbl">MT (Auto fill hoga)</label>'
     +'<input type="number" class="finp" id="df-mt" value="'+(pf.mt||'')+'" step="0.01" placeholder="e.g. 10" oninput="syncMTToQtl()"></div>'
@@ -933,6 +960,7 @@ function openDispatchFor(sid){
     +'</div>'
     +dispatchAttachFieldsHtml('df','')
     +dispFormHtml(sid)
+    +'<div class="fgrid"><div class="fg2"><label class="flbl">Party Weight (Qtl)</label><input type="number" step="0.01" class="finp" id="df-partyweight" placeholder="Party ka weight (optional)"></div></div>'
     +'<div class="fg2"><label class="flbl">Gatepass No</label><input class="finp" id="df-gp" placeholder="GP-..." style="margin-bottom:10px"></div>'
     +'<div class="fg2"><label class="flbl">Note</label><input class="finp" id="df-note" placeholder="Optional..."></div>'
     +'</div>'
@@ -946,22 +974,29 @@ function saveDispatchForCore(sid,onSaved){
   var qtl=parseFloat(document.getElementById('df-qtl').value);
   var balQ=pendingQtl(sid);
   if(!veh||!qtl){toast('Vehicle No aur Quintal zaroori hai','e');return;}
-  if(qtl>balQ+0.01){toast('Sirf '+fmtD(balQ)+' Qtl pending hai!','e');return;}
+  var pw=readPartyWeightById('df-partyweight');
   var fromFirm=(document.getElementById('df-fromfirm')&&document.getElementById('df-fromfirm').value||'').trim();
-  var cand={saudaId:sid,date:document.getElementById('df-date').value,vehicle:veh,driver:document.getElementById('df-drv').value,qtl:qtl,bags:parseInt(document.getElementById('df-bags').value)||0,gatepass:document.getElementById('df-gp').value,status:'pending',note:document.getElementById('df-note').value,fromFirm:fromFirm};
-  if(isDuplicateDispatchCandidate(cand,null)){
-    if(!confirm('⚠️ Same jaisa Dispatch pehle se hai (duplicate).\n\nPhir bhi yeh entry save karni hai?')) return;
+  function doSaveDF(){
+    var cand={saudaId:sid,date:document.getElementById('df-date').value,vehicle:veh,driver:document.getElementById('df-drv').value,qtl:qtl,bags:parseInt(document.getElementById('df-bags').value)||0,gatepass:document.getElementById('df-gp').value,status:'pending',note:document.getElementById('df-note').value,fromFirm:fromFirm,partyWeight:pw};
+    if(isDuplicateDispatchCandidate(cand,null)){
+      if(!confirm('⚠️ Same jaisa Dispatch pehle se hai (duplicate).\n\nPhir bhi yeh entry save karni hai?')) return;
+    }
+    var id=genSafeId('D', DATA.nD);
+    var newD={id:id,saudaId:sid,date:document.getElementById('df-date').value,vehicle:veh,driver:document.getElementById('df-drv').value,qtl:qtl,bags:parseInt(document.getElementById('df-bags').value)||0,gatepass:document.getElementById('df-gp').value,status:'pending',note:document.getElementById('df-note').value,fromFirm:fromFirm,partyWeight:pw,attachments:[]};
+    DATA.dispatches.push(newD);
+    DATA.nD++;
+    uploadDispatchPendingFiles(newD,'df',function(){
+      toast('Dispatch save ho gaya! Status: Pending','s');
+      openSaudaDetail(sid);
+      updHeader();
+      if(onSaved) onSaved(newD);
+    });
   }
-  var id=genSafeId('D', DATA.nD);
-  var newD={id:id,saudaId:sid,date:document.getElementById('df-date').value,vehicle:veh,driver:document.getElementById('df-drv').value,qtl:qtl,bags:parseInt(document.getElementById('df-bags').value)||0,gatepass:document.getElementById('df-gp').value,status:'pending',note:document.getElementById('df-note').value,fromFirm:fromFirm,attachments:[]};
-  DATA.dispatches.push(newD);
-  DATA.nD++;
-  uploadDispatchPendingFiles(newD,'df',function(){
-    toast('Dispatch save ho gaya! Status: Pending','s');
-    openSaudaDetail(sid);
-    updHeader();
-    if(onSaved) onSaved(newD);
-  });
+  if(qtl>balQ+0.01){
+    var tot=totalSaudaQtl(sid),disp=dispatchedQtl(sid),extra=qtl-balQ;
+    if(!confirm('⚠️ Weight — zyada dispatch\n\nSauda total: '+fmtD(tot)+' Qtl\nPehle dispatched: '+fmtD(disp)+' Qtl\nAb tak baki tha: '+fmtD(balQ)+' Qtl\nIs dispatch: '+fmtD(qtl)+' Qtl\n\nIs entry se '+fmtD(extra)+' Qtl contract se zyada (overage).\n\nPhir bhi save karna hai?')) return;
+  }
+  doSaveDF();
 }
 
 function openNewDispatch(){
@@ -986,6 +1021,7 @@ function openNewDispatch(){
     +'</div>'
     +'<div style="background:var(--gbg);border:1px solid var(--gb);border-radius:7px;padding:8px 12px;font-size:12px;margin-bottom:14px;color:var(--green)">ℹ 1 MT = 10 Quintal — ek mein bharo doosra auto bhar jaayega</div>'
     +dispatchAttachFieldsHtml('nd','')
+    +'<div class="fgrid"><div class="fg2 full"><label class="flbl">Party Weight (Qtl)</label><input type="number" step="0.01" class="finp" id="nd-partyweight" placeholder="Party ka weight (optional)"></div></div>'
     +'<div class="fgrid">'
     +'<div class="fg2"><label class="flbl">Gatepass No</label><input class="finp" id="nd-gp" placeholder="GP-..."></div>'
     +'<div class="fg2"><label class="flbl">Note</label><input class="finp" id="nd-note" placeholder="Optional..."></div>'
@@ -1010,23 +1046,30 @@ function saveNewDispatchCore(onSaved){
   var qtl=parseFloat(document.getElementById('nd-qtl').value);
   if(!sid||!veh||!qtl){toast('Sauda, Vehicle aur Quintal zaroori hai','e');return;}
   var balQ=pendingQtl(sid);
-  if(qtl>balQ+0.01){toast('Sirf '+fmtD(balQ)+' Qtl pending hai!','e');return;}
+  var pw=readPartyWeightById('nd-partyweight');
   var fromFirm=(document.getElementById('nd-fromfirm')&&document.getElementById('nd-fromfirm').value||'').trim();
-  var cand={saudaId:sid,date:document.getElementById('nd-date').value,vehicle:veh,driver:document.getElementById('nd-drv').value,qtl:qtl,bags:parseInt(document.getElementById('nd-bags').value)||0,gatepass:document.getElementById('nd-gp').value,status:'pending',note:document.getElementById('nd-note').value,fromFirm:fromFirm};
-  if(isDuplicateDispatchCandidate(cand,null)){
-    if(!confirm('⚠️ Same jaisa Dispatch pehle se hai (duplicate).\n\nPhir bhi yeh entry save karni hai?')) return;
+  function doSaveND(){
+    var cand={saudaId:sid,date:document.getElementById('nd-date').value,vehicle:veh,driver:document.getElementById('nd-drv').value,qtl:qtl,bags:parseInt(document.getElementById('nd-bags').value)||0,gatepass:document.getElementById('nd-gp').value,status:'pending',note:document.getElementById('nd-note').value,fromFirm:fromFirm,partyWeight:pw};
+    if(isDuplicateDispatchCandidate(cand,null)){
+      if(!confirm('⚠️ Same jaisa Dispatch pehle se hai (duplicate).\n\nPhir bhi yeh entry save karni hai?')) return;
+    }
+    var id=genSafeId('D', DATA.nD);
+    var newD={id:id,saudaId:sid,date:document.getElementById('nd-date').value,vehicle:veh,driver:document.getElementById('nd-drv').value,qtl:qtl,bags:parseInt(document.getElementById('nd-bags').value)||0,gatepass:document.getElementById('nd-gp').value,status:'pending',note:document.getElementById('nd-note').value,fromFirm:fromFirm,partyWeight:pw,attachments:[]};
+    DATA.dispatches.push(newD);
+    DATA.nD++;
+    uploadDispatchPendingFiles(newD,'nd',function(){
+      closeModal();
+      toast('Dispatch save ho gaya!','s');
+      renderDispatch();
+      updHeader();
+      if(onSaved) onSaved(newD);
+    });
   }
-  var id=genSafeId('D', DATA.nD);
-  var newD={id:id,saudaId:sid,date:document.getElementById('nd-date').value,vehicle:veh,driver:document.getElementById('nd-drv').value,qtl:qtl,bags:parseInt(document.getElementById('nd-bags').value)||0,gatepass:document.getElementById('nd-gp').value,status:'pending',note:document.getElementById('nd-note').value,fromFirm:fromFirm,attachments:[]};
-  DATA.dispatches.push(newD);
-  DATA.nD++;
-  uploadDispatchPendingFiles(newD,'nd',function(){
-    closeModal();
-    toast('Dispatch save ho gaya!','s');
-    renderDispatch();
-    updHeader();
-    if(onSaved) onSaved(newD);
-  });
+  if(qtl>balQ+0.01){
+    var tot=totalSaudaQtl(sid),disp=dispatchedQtl(sid),extra=qtl-balQ;
+    if(!confirm('⚠️ Weight — zyada dispatch\n\nSauda total: '+fmtD(tot)+' Qtl\nPehle dispatched: '+fmtD(disp)+' Qtl\nAb tak baki tha: '+fmtD(balQ)+' Qtl\nIs dispatch: '+fmtD(qtl)+' Qtl\n\nIs entry se '+fmtD(extra)+' Qtl contract se zyada (overage).\n\nPhir bhi save karna hai?')) return;
+  }
+  doSaveND();
 }
 
 // ===== NEW/EDIT SAUDA =====
@@ -1064,6 +1107,12 @@ function openNewSauda(){
     +'<div><div style="font-size:13px;font-weight:600;color:#9d174d">🔔 One-Time Delivery Sauda</div>'
     +'<div style="font-size:11px;color:var(--text3)">Agar reject bhi ho toh bhi quantity minus ho jaayegi balance se</div></div>'
     +'</label></div>'
+    +'<div class="fg2">'
+    +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px;background:var(--gbg);border:1px solid var(--gb);border-radius:6px">'
+    +'<input type="checkbox" id="ns-manual-complete" style="width:16px;height:16px;accent-color:var(--green)">'
+    +'<div><div style="font-size:13px;font-weight:600;color:var(--green)">✅ Sauda complete maan lo (manual)</div>'
+    +'<div style="font-size:11px;color:var(--text3)">Weight kam / zyada ho — business ke hisaab se deal band ho chuka ho toh tick karo; baki pending 0 dikhega</div></div>'
+    +'</label></div>'
     +'</div>'
     +'<div class="mf"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button>'
     +'<button class="btn btn-blue" onclick="saveSauda()">💾 Sauda Save Karo</button></div>';
@@ -1080,11 +1129,11 @@ function saveSauda(){
   var pid=document.getElementById('ns-party').value,bid=document.getElementById('ns-broker').value;
   var qty=parseFloat(document.getElementById('ns-qty').value),rate=parseFloat(document.getElementById('ns-rate').value);
   if(!pid||!bid||!qty||!rate){toast('Party, Broker, Qty aur Rate zaroori hai!','e');return;}
-  if(isDuplicateSaudaCandidate({date:document.getElementById('ns-date').value,partyId:pid,brokerId:bid,qty:qty,rate:rate,location:document.getElementById('ns-loc').value,notes:document.getElementById('ns-notes').value,oneTime:document.getElementById('ns-onetime').checked},null)){
+  if(isDuplicateSaudaCandidate({date:document.getElementById('ns-date').value,partyId:pid,brokerId:bid,qty:qty,rate:rate,location:document.getElementById('ns-loc').value,notes:document.getElementById('ns-notes').value,oneTime:document.getElementById('ns-onetime').checked,manualComplete:!!document.getElementById('ns-manual-complete').checked},null)){
     if(!confirm('⚠️ Same jaisa Sauda pehle se maujood hai (duplicate).\n\nPhir bhi naya Sauda create karna chahte ho?')) return;
   }
   var id=genSafeId('S', DATA.nS);
-  DATA.saude.push({id:id,no:'S-'+String(DATA.nS).padStart(3,'0'),date:document.getElementById('ns-date').value,partyId:pid,brokerId:bid,qty:qty,rate:rate,location:document.getElementById('ns-loc').value,notes:document.getElementById('ns-notes').value,oneTime:document.getElementById('ns-onetime').checked});
+  DATA.saude.push({id:id,no:'S-'+String(DATA.nS).padStart(3,'0'),date:document.getElementById('ns-date').value,partyId:pid,brokerId:bid,qty:qty,rate:rate,location:document.getElementById('ns-loc').value,notes:document.getElementById('ns-notes').value,oneTime:document.getElementById('ns-onetime').checked,manualComplete:!!document.getElementById('ns-manual-complete').checked});
   DATA.nS++;
   renumberSaudaNos();
   syncAllSaudeToFB();
@@ -1113,6 +1162,11 @@ function openEditSauda(sid){
     +'<div><div style="font-size:13px;font-weight:600;color:#9d174d">🔔 One-Time Delivery Sauda</div>'
     +'<div style="font-size:11px;color:var(--text3)">Reject bhi minus karega balance se</div></div>'
     +'</label></div>'
+    +'<div class="fg2"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px;background:var(--gbg);border:1px solid var(--gb);border-radius:6px">'
+    +'<input type="checkbox" id="es-manual-complete"'+(s.manualComplete?' checked':'')+' style="width:16px;height:16px;accent-color:var(--green)">'
+    +'<div><div style="font-size:13px;font-weight:600;color:var(--green)">✅ Sauda complete maan lo (manual)</div>'
+    +'<div style="font-size:11px;color:var(--text3)">Deal band — baki pending 0 dikhega</div></div>'
+    +'</label></div>'
     +'</div><div class="mf"><button class="btn btn-red" onclick="delSauda(\''+sid+'\')">🗑 Delete</button>'
     +'<div style="display:flex;gap:6px"><button class="btn btn-ghost" onclick="openSaudaDetail(\''+sid+'\')">← Back</button>'
     +'<button class="btn btn-blue" onclick="updateSauda(\''+sid+'\')">💾 Update</button></div></div>';
@@ -1122,12 +1176,13 @@ function updateSauda(sid){
   var s=getSauda(sid);if(!s)return;
   var qty=parseFloat(document.getElementById('es-qty').value),rate=parseFloat(document.getElementById('es-rate').value);
   if(!qty||!rate){toast('Qty aur Rate zaroori hai','e');return;}
-  if(isDuplicateSaudaCandidate({date:document.getElementById('es-date').value,partyId:document.getElementById('es-party').value,brokerId:document.getElementById('es-broker').value,qty:qty,rate:rate,location:document.getElementById('es-loc').value,notes:document.getElementById('es-notes').value,oneTime:document.getElementById('es-onetime').checked},sid)){
+  if(isDuplicateSaudaCandidate({date:document.getElementById('es-date').value,partyId:document.getElementById('es-party').value,brokerId:document.getElementById('es-broker').value,qty:qty,rate:rate,location:document.getElementById('es-loc').value,notes:document.getElementById('es-notes').value,oneTime:document.getElementById('es-onetime').checked,manualComplete:!!document.getElementById('es-manual-complete').checked},sid)){
     if(!confirm('⚠️ Kisi aur Sauda jaisi same entry ban rahi hai (duplicate).\n\nPhir bhi update karna chahte ho?')) return;
   }
   s.date=document.getElementById('es-date').value;s.partyId=document.getElementById('es-party').value;s.brokerId=document.getElementById('es-broker').value;
   s.qty=qty;s.rate=rate;s.location=document.getElementById('es-loc').value;s.notes=document.getElementById('es-notes').value;
   s.oneTime=document.getElementById('es-onetime').checked;
+  s.manualComplete=!!document.getElementById('es-manual-complete').checked;
   renumberSaudaNos();
   syncAllSaudeToFB();
   toast('Sauda update ho gaya!','s');openSaudaDetail(sid);fillBrokerFilter();updHeader();
@@ -1225,7 +1280,8 @@ function getFilteredDispatchList(){
       var qtlStr=String(d.qtl!=null?d.qtl:'');
       var mtStr=String(qtlToMt(d.qtl||0));
       var bagStr=String(d.bags!=null?d.bags:'');
-      var fields=[d.vehicle,d.driver,d.gatepass,(s?s.no:''),p,b,d.fromFirm||'',d.note||'',qtlStr,mtStr,bagStr].map(function(x){return String(x||'').toLowerCase().trim();});
+      var pwStr=String(d.partyWeight!=null?d.partyWeight:'');
+      var fields=[d.vehicle,d.driver,d.gatepass,(s?s.no:''),p,b,d.fromFirm||'',d.note||'',qtlStr,mtStr,bagStr,pwStr].map(function(x){return String(x||'').toLowerCase().trim();});
       if(exact){
         if(!fields.some(function(x){return x===search;})) return false;
       }else{
@@ -1239,10 +1295,10 @@ function getFilteredDispatchList(){
 function exportDispatchFilteredCSV(){
   var list=getFilteredDispatchList();
   if(!list.length){toast('Export ke liye koi dispatch nahi','e');return;}
-  var hdr=['Tarikh','Sauda No','Party','Broker','From Firm','Vehicle','Driver','Qtl','MT','Bags','Gatepass','Status','Note'];
+  var hdr=['Tarikh','Sauda No','Party','Broker','From Firm','Vehicle','Driver','Qtl','MT','Bags','Party Weight Qtl','Gatepass','Status','Note'];
   var rows=list.map(function(d){
     var s=getSauda(d.saudaId);
-    return [d.date,s?s.no:'',s?getParty(s.partyId).name:'',s?getBroker(s.brokerId).name:'',d.fromFirm||'',d.vehicle||'',d.driver||'',String(d.qtl||''),String(qtlToMt(d.qtl||0)),String(d.bags||''),d.gatepass||'',d.status||'',d.note||''];
+    return [d.date,s?s.no:'',s?getParty(s.partyId).name:'',s?getBroker(s.brokerId).name:'',d.fromFirm||'',d.vehicle||'',d.driver||'',String(d.qtl||''),String(qtlToMt(d.qtl||0)),String(d.bags||''),String(d.partyWeight!=null?d.partyWeight:''),d.gatepass||'',d.status||'',d.note||''];
   });
   downloadCsvFile('MaalHisab_Dispatch_'+todayDate()+'.csv',[hdr].concat(rows));
   toast('Dispatch CSV download!','s');
@@ -1261,6 +1317,7 @@ function renderDispatch(){
       +'<td style="font-family:Rajdhani,sans-serif;font-weight:700;font-size:13px">'+fmtD(d.qtl||0)+' Qtl</td>'
       +'<td style="color:var(--text3)">'+fmtD(qtlToMt(d.qtl||0))+' MT</td>'
       +'<td style="color:var(--text3)">'+fmt(d.bags||0)+'</td>'
+      +'<td style="color:var(--text3);font-size:11px">'+(d.partyWeight!=null&&d.partyWeight!==''?fmtD(d.partyWeight):'—')+'</td>'
       +'<td><span class="rtag">'+d.gatepass+'</span></td>'
       +dispDocsCellHtml(d)
       +'<td><span class="'+getBadgeCls(d.status)+'">'+capFirst(d.status)+'</span></td>'
@@ -1271,7 +1328,7 @@ function renderDispatch(){
       +'<button class="ab2 v" title="Detail" onclick="openSaudaDetail(\''+d.saudaId+'\')">👁</button>'
       +'</div></td></tr>';
   }).join('');
-  document.getElementById('disp-tbody').innerHTML=html||'<tr><td colspan="15" class="empty" style="padding:24px">Koi dispatch nahi mila</td></tr>';
+  document.getElementById('disp-tbody').innerHTML=html||'<tr><td colspan="16" class="empty" style="padding:24px">Koi dispatch nahi mila</td></tr>';
 }
 function clrDF(){
   ['df-s','df-from','df-to'].forEach(function(i){document.getElementById(i).value='';});
@@ -1601,6 +1658,7 @@ var ALL_FIELDS=[
   {id:'f-qtl',lbl:'Quintal'},
   {id:'f-mt',lbl:'MT'},
   {id:'f-bags',lbl:'Bags'},
+  {id:'f-party-weight',lbl:'Party Weight (Qtl)'},
   {id:'f-gatepass',lbl:'Gatepass No'},
   {id:'f-status',lbl:'Status'},
   {id:'f-note',lbl:'Note / Wajah'},
@@ -1678,6 +1736,7 @@ function getRowValue(d,fid){
     'f-qtl':fmtD(d.qtl||0)+' Qtl',
     'f-mt':fmtD(qtlToMt(d.qtl||0))+' MT',
     'f-bags':fmt(d.bags||0),
+    'f-party-weight':(d.partyWeight!=null&&d.partyWeight!=='')?fmtD(d.partyWeight)+' Qtl':'',
     'f-gatepass':d.gatepass,
     'f-status':capFirst(d.status),
     'f-note':d.note||'',
@@ -2734,7 +2793,8 @@ async function doImportFromCsv(){
           rate: rate,
           location: r.location || r.Location || '',
           notes: r.notes || r.Notes || '',
-          oneTime: (String(r.oneTime || r.onetime || r.one_time || '').toLowerCase()==='true' || Number(r.oneTime||r.onetime||r.one_time||0)===1)
+          oneTime: (String(r.oneTime || r.onetime || r.one_time || '').toLowerCase()==='true' || Number(r.oneTime||r.onetime||r.one_time||0)===1),
+          manualComplete: (String(r.manualComplete || r.manual_complete || '').toLowerCase()==='true' || Number(r.manualComplete||r.manual_complete||0)===1)
         };
         DATA.saude.push(obj);
         fbSave('saude', obj.id, obj);
@@ -2760,6 +2820,10 @@ async function doImportFromCsv(){
         if(!date || !sid || !vehicle || !driver){ skipped++; return; }
 
         var fromFirmImp = (r.fromFirm || r.from_firm || r.firm || '').trim();
+        var pwImp = r.partyWeight;
+        if(pwImp===undefined||pwImp==='') pwImp = r.party_weight || r.PartyWeight;
+        var partyWeight = (pwImp!==undefined&&pwImp!=='') ? parseFloat(pwImp) : 0;
+        if(isNaN(partyWeight)) partyWeight = 0;
         var obj = {
           id: genSafeId('D', DATA.nD++),
           saudaId: sid,
@@ -2772,6 +2836,7 @@ async function doImportFromCsv(){
           status: status,
           note: note,
           fromFirm: fromFirmImp,
+          partyWeight: partyWeight,
           attachments: []
         };
         DATA.dispatches.push(obj);
