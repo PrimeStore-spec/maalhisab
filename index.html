@@ -169,9 +169,12 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
 .ps-done{background:#dcfce7;color:#166534;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;}
 .ps-partial{background:#fef9c3;color:#854d0e;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;}
 .ps-pending{background:#fee2e2;color:#991b1b;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;}
-.dtable{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
-.dtable th{background:#f0f4fc;padding:7px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--blue2);border-bottom:2px solid #dae4f8;text-align:left;}
-.dtable td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+/* Dispatch history / audit tables: naam wrap, overlap na ho; mobile par scroll */
+.dtable{width:100%;min-width:52rem;border-collapse:collapse;font-size:12px;margin-top:8px;}
+.dtable th{background:#f0f4fc;padding:7px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--blue2);border-bottom:2px solid #dae4f8;text-align:left;vertical-align:top;}
+.dtable td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;white-space:normal;word-break:break-word;overflow-wrap:anywhere;line-height:1.35;}
+.dtable td.dt-nowrap,.dtable th.dt-nowrap{white-space:nowrap;overflow-wrap:normal;word-break:normal;}
+.dtable td.dt-firm{min-width:10rem;max-width:16rem;}
 .dtable tr:hover td{background:var(--bluebg);}
 .badge-pass{background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;}
 .badge-rej{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;}
@@ -193,11 +196,13 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
 @media(max-width:768px){
   header{min-height:auto;padding:8px 10px;}
   .logo-text{font-size:17px;}
-  .tsc{border-radius:6px;border:1px solid var(--border);background:var(--surface);}
+  .tsc{border-radius:6px;border:1px solid var(--border);background:var(--surface);-webkit-overflow-scrolling:touch;}
   .tsc table{font-size:10px;}
   .tsc th,.tsc td{padding:5px 7px;}
   .tsc td{white-space:normal;vertical-align:top;word-break:break-word;}
   .tsc th{white-space:normal;}
+  .modal .dtable{font-size:11px;min-width:48rem;}
+  .modal .dtable td.dt-firm{min-width:8rem;max-width:none;}
   .jgrid{grid-template-columns:1fr!important;}
   .th2 .ttl{font-size:13px;}
 }
@@ -637,24 +642,24 @@ function openSaudaDetail(sid){
   if(disps.length===0){
     h+='<div class="empty" style="padding:24px"><div class="ei">🚚</div><h3>Abhi koi dispatch nahi hua</h3></div>';
   }else{
-    h+='<div style="overflow-x:auto"><table class="dtable">'
-      +'<thead><tr><th>Tarikh</th><th>Vehicle No</th><th>Driver</th><th>From Firm</th><th>Quintal</th><th>MT</th><th>Bags</th><th>Party Wt</th><th>Gatepass</th><th>Docs</th><th>Status</th><th>Note</th><th>Action</th></tr></thead><tbody>';
+    h+='<div class="tsc"><table class="dtable">'
+      +'<thead><tr><th>Tarikh</th><th>Vehicle No</th><th>Driver</th><th>From Firm</th><th class="dt-nowrap">Quintal</th><th class="dt-nowrap">MT</th><th class="dt-nowrap">Bags</th><th class="dt-nowrap">Party Wt</th><th class="dt-nowrap">Gatepass</th><th>Docs</th><th>Status</th><th>Note</th><th class="dt-nowrap">Action</th></tr></thead><tbody>';
     disps.forEach(function(d){
       var isMinusByReject=d.status==='reject'&&s.oneTime;
       h+='<tr'+(isMinusByReject?' style="background:#fdf2f8"':'')+'>'
-        +'<td>'+d.date+'</td>'
-        +'<td class="mono" style="font-weight:700">'+d.vehicle+'</td>'
+        +'<td class="dt-nowrap">'+d.date+'</td>'
+        +'<td class="mono dt-nowrap" style="font-weight:700">'+d.vehicle+'</td>'
         +'<td>'+d.driver+'</td>'
-        +'<td style="font-size:11px;color:var(--text2);max-width:120px">'+(d.fromFirm||'—')+'</td>'
-        +'<td style="font-family:Rajdhani,sans-serif;font-weight:700;font-size:14px">'+fmtD(d.qtl||0)+' Qtl</td>'
-        +'<td style="color:var(--text2)">'+fmtD(qtlToMt(d.qtl||0))+' MT</td>'
-        +'<td style="color:var(--text2)">'+fmt(d.bags||0)+'</td>'
-        +'<td style="color:var(--text2);font-size:11px">'+(d.partyWeight!=null&&d.partyWeight!==''?fmtD(d.partyWeight):'—')+'</td>'
-        +'<td><span class="rtag">'+d.gatepass+'</span></td>'
+        +'<td class="dt-firm" style="font-size:11px;color:var(--text2)">'+(d.fromFirm||'—')+'</td>'
+        +'<td class="dt-nowrap" style="font-family:Rajdhani,sans-serif;font-weight:700;font-size:14px">'+fmtD(d.qtl||0)+' Qtl</td>'
+        +'<td class="dt-nowrap" style="color:var(--text2)">'+fmtD(qtlToMt(d.qtl||0))+' MT</td>'
+        +'<td class="dt-nowrap" style="color:var(--text2)">'+fmt(d.bags||0)+'</td>'
+        +'<td class="dt-nowrap" style="color:var(--text2);font-size:11px">'+(d.partyWeight!=null&&d.partyWeight!==''?fmtD(d.partyWeight):'—')+'</td>'
+        +'<td class="dt-nowrap"><span class="rtag">'+d.gatepass+'</span></td>'
         +dispAttachLinksTd(d)
-        +'<td><span class="'+getBadgeCls(d.status)+'">'+capFirst(d.status)+'</span>'+(isMinusByReject?'<div style="font-size:9px;color:#9d174d;margin-top:2px">⬇ Minus ho gaya</div>':'')+'</td>'
-        +'<td style="color:var(--text3);font-size:11px;max-width:100px;overflow:hidden;text-overflow:ellipsis">'+(d.note||'—')+'</td>'
-        +'<td><div class="ab">'
+        +'<td class="dt-nowrap"><span class="'+getBadgeCls(d.status)+'">'+capFirst(d.status)+'</span>'+(isMinusByReject?'<div style="font-size:9px;color:#9d174d;margin-top:2px">⬇ Minus ho gaya</div>':'')+'</td>'
+        +'<td style="color:var(--text3);font-size:11px;max-width:8rem;word-break:break-word">'+(d.note||'—')+'</td>'
+        +'<td class="dt-nowrap"><div class="ab">'
         +(d.status==='pending'
           ?'<button class="ab2 v" title="Pass" onclick="setDispStatus(\''+d.id+'\',\'pass\',\''+sid+'\')">✓</button>'
           +'<button class="ab2 d" title="Reject" onclick="askReject(\''+d.id+'\',\''+sid+'\')">✕</button>'
