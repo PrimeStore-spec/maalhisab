@@ -264,13 +264,13 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
   <div id="p-dash">
     <div class="stats-grid">
       <div class="sc" style="--cc:var(--blue)"><span class="si">📄</span><div class="sl">Total Saude</div><div class="sv" id="d-saude">0</div><div class="ss2">Sab active deals</div></div>
-      <div class="sc" style="--cc:var(--green)"><span class="si">✅</span><div class="sl">Complete</div><div class="sv" id="d-complete">0</div><div class="ss2">Poora bhut gaya</div></div>
-      <div class="sc" style="--cc:var(--yellow)"><span class="si">⏳</span><div class="sl">Partial</div><div class="sv" id="d-partial">0</div><div class="ss2">Aadha baki</div></div>
-      <div class="sc" style="--cc:var(--red)"><span class="si">🔴</span><div class="sl">Pending</div><div class="sv" id="d-pending">0</div><div class="ss2">Kuch nahi bhuta</div></div>
-      <div class="sc" style="--cc:var(--teal)"><span class="si">📦</span><div class="sl">Total Maal</div><div class="sv" id="d-totqtl">0 Qtl</div><div class="ss2" id="d-totmt-sub">0 MT</div></div>
-      <div class="sc" style="--cc:var(--orange)"><span class="si">🚚</span><div class="sl">Bhuta Maal</div><div class="sv" id="d-dispqtl">0 Qtl</div><div class="ss2" id="d-dispmt-sub">0 MT</div></div>
-      <div class="sc" style="--cc:var(--purple)"><span class="si">⚖️</span><div class="sl">Baki Pending</div><div class="sv" id="d-bakiqtl">0 Qtl</div><div class="ss2" id="d-bakimt-sub">0 MT</div></div>
-      <div class="sc" style="--cc:var(--green)"><span class="si">💰</span><div class="sl">Total Value</div><div class="sv" id="d-value">₹0</div><div class="ss2">Sab saude ki value</div></div>
+      <div class="sc" style="--cc:var(--green)"><span class="si">✅</span><div class="sl">Complete</div><div class="sv" id="d-complete">0</div><div class="ss2">Complete Order</div></div>
+      <div class="sc" style="--cc:var(--yellow)"><span class="si">⏳</span><div class="sl">Partial</div><div class="sv" id="d-partial">0</div><div class="ss2">Partial</div></div>
+      <div class="sc" style="--cc:var(--red)"><span class="si">🔴</span><div class="sl">Pending</div><div class="sv" id="d-pending">0</div><div class="ss2">Pending </div></div>
+      <div class="sc" style="--cc:var(--teal)"><span class="si">📦</span><div class="sl">Total Sale Order</div><div class="sv" id="d-totqtl">0 Qtl</div><div class="ss2" id="d-totmt-sub">0 MT</div></div>
+      <div class="sc" style="--cc:var(--orange)"><span class="si">🚚</span><div class="sl">Deliver Order</div><div class="sv" id="d-dispqtl">0 Qtl</div><div class="ss2" id="d-dispmt-sub">0 MT</div></div>
+      <div class="sc" style="--cc:var(--purple)"><span class="si">⚖️</span><div class="sl">Balance Order</div><div class="sv" id="d-bakiqtl">0 Qtl</div><div class="ss2" id="d-bakimt-sub">0 MT</div></div>
+      <div class="sc" style="--cc:var(--green)"><span class="si">💰</span><div class="sl">Total Value</div><div class="sv" id="d-value">₹0</div><div class="ss2">Total Amount</div></div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div class="stl">📄 Saude <span>Cards</span> <span style="font-size:11px;color:var(--text3);font-weight:400;font-family:'Noto Sans',sans-serif">— Click karo detail dekhne ke liye</span></div>
@@ -649,7 +649,7 @@ function openSaudaDetail(sid){
     +'<div class="jst" style="padding:10px 12px"><div class="jsv" style="color:var(--blue);font-size:20px">₹'+fmt(s.rate)+'</div><div class="jsl">Rate / MT</div></div>'
     +'<div class="jst" style="padding:10px 12px"><div class="jsv" style="font-size:18px">'+fmtD(totQtl)+' Qtl</div><div class="jsl">Total Qty</div><div style="font-size:10px;color:var(--text3)">'+fmtD(s.qty)+' MT &nbsp;·&nbsp; ₹'+fmt(s.qty*s.rate)+'</div></div>'
     +'<div class="jst" style="padding:10px 12px"><div class="jsv" style="color:#16a34a;font-size:18px">'+fmtD(dispQ)+' Qtl</div><div class="jsl">Bhuta ('+(s.oneTime?'Pass+Reject':'Pass Only')+')</div></div>'
-    +'<div class="jst" style="padding:10px 12px"><div class="jsv" style="color:'+pCol+';font-size:18px">'+(balQ<=0?'Done ✓':fmtD(balQ)+' Qtl')+'</div><div class="jsl">Baki Pending</div></div>'
+    +'<div class="jst" style="padding:10px 12px"><div class="jsv" style="color:'+pCol+';font-size:18px">'+(balQ<=0?'Done ✓':fmtD(balQ)+' Qtl')+'</div><div class="jsl">Balance Order</div></div>'
     +'</div>'
     +'<div style="margin-bottom:14px">'
     +'<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>Dispatch Progress</span><span style="font-weight:700;color:'+pCol+'">'+pc+'%</span></div>'
@@ -1138,7 +1138,7 @@ function openNewSauda(){
     +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px;background:var(--gbg);border:1px solid var(--gb);border-radius:6px">'
     +'<input type="checkbox" id="ns-manual-complete" style="width:16px;height:16px;accent-color:var(--green)">'
     +'<div><div style="font-size:13px;font-weight:600;color:var(--green)">✅ Sauda complete maan lo (manual)</div>'
-    +'<div style="font-size:11px;color:var(--text3)">Weight kam / zyada ho — business ke hisaab se deal band ho chuka ho toh tick karo; baki pending 0 dikhega</div></div>'
+    +'<div style="font-size:11px;color:var(--text3)">Weight kam / zyada ho — business ke hisaab se deal band ho chuka ho toh tick karo; Balance Order 0 dikhega</div></div>'
     +'</label></div>'
     +'</div>'
     +'<div class="mf"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button>'
@@ -1192,7 +1192,7 @@ function openEditSauda(sid){
     +'<div class="fg2"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px;background:var(--gbg);border:1px solid var(--gb);border-radius:6px">'
     +'<input type="checkbox" id="es-manual-complete"'+(s.manualComplete?' checked':'')+' style="width:16px;height:16px;accent-color:var(--green)">'
     +'<div><div style="font-size:13px;font-weight:600;color:var(--green)">✅ Sauda complete maan lo (manual)</div>'
-    +'<div style="font-size:11px;color:var(--text3)">Deal band — baki pending 0 dikhega</div></div>'
+    +'<div style="font-size:11px;color:var(--text3)">Deal band — Balance Order 0 dikhega</div></div>'
     +'</label></div>'
     +'</div><div class="mf"><button class="btn btn-red" onclick="delSauda(\''+sid+'\')">🗑 Delete</button>'
     +'<div style="display:flex;gap:6px"><button class="btn btn-ghost" onclick="openSaudaDetail(\''+sid+'\')">← Back</button>'
