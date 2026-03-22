@@ -291,8 +291,8 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;flex-wrap:wrap;gap:8px">
       <div class="stl" style="margin:0">📄 Saude <span>Management</span></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <select class="fsel" id="sf-broker" onchange="renderSaude()"><option value="">Sab Brokers</option></select>
-        <select class="fsel" id="sf-status" onchange="renderSaude()"><option value="">Sab Status</option><option value="complete">Complete</option><option value="partial">Partial</option><option value="pending">Pending</option></select>
+        <select class="fsel" id="sf-broker" onchange="renderSaude()"><option value="">All Brokers</option></select>
+        <select class="fsel" id="sf-status" onchange="renderSaude()"><option value="">All Status</option><option value="complete">Complete</option><option value="partial">Partial</option><option value="pending">Pending</option></select>
         <input class="fi" id="sf-q" placeholder="Search: No/Party/Broker/Loc/Note/Rate" oninput="renderSaude()" style="min-width:220px">
         <input type="date" class="fi" id="sf-from" onchange="renderSaude()" style="min-width:150px">
         <input type="date" class="fi" id="sf-to" onchange="renderSaude()" style="min-width:150px">
@@ -314,7 +314,7 @@ mark{background:rgba(26,95,200,0.1);color:var(--blue2);border-radius:2px;padding
       <div class="fbar">
         <div class="fg-s"><span class="fl">Search</span><input class="fi" id="df-s" placeholder="Vehicle, Driver, Qtl, Bags, Firm, GP, Note, Party..." oninput="renderDispatch()"></div>
         <div class="fg-s"><span class="fl">Sauda</span><select class="fsel" id="df-sauda" onchange="renderDispatch()"><option value="">Sab Saude</option></select></div>
-        <div class="fg-s"><span class="fl">Broker</span><select class="fsel" id="df-broker" onchange="renderDispatch()"><option value="">Sab Brokers</option></select></div>
+        <div class="fg-s"><span class="fl">Broker</span><select class="fsel" id="df-broker" onchange="renderDispatch()"><option value="">All Brokers</option></select></div>
         <div class="fg-s"><span class="fl">Status</span><select class="fsel" id="df-status" onchange="renderDispatch()"><option value="">Sab</option><option value="pending">Pending</option><option value="pass">Pass</option><option value="reject">Reject</option></select></div>
         <div class="fg-s"><span class="fl">Exact</span><input type="checkbox" id="df-exact" onchange="renderDispatch()" style="width:18px;height:18px;accent-color:var(--blue)"></div>
         <div class="fg-s"><span class="fl">Tarikh Se</span><input type="date" class="fi" id="df-from" onchange="renderDispatch()"></div>
@@ -624,7 +624,7 @@ function buildSaudaCard(s){
     +'<div class="jst"><div class="jsv">'+fmtD(totQtl)+'</div><div class="jsl">Qtl Total</div></div>'
     +'<div class="jst"><div class="jsv" style="color:'+pCol+'">'+fmtD(balQ<=0?0:balQ)+'</div><div class="jsl">Qtl Baki</div></div>'
     +'</div>'
-    +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px"><span>'+fmtD(dispQ)+' Qtl bhuta ('+fmtD(qtlToMt(dispQ))+' MT)</span><span>'+pc+'%</span></div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px"><span>'+fmtD(dispQ)+' Qtl Deliver ('+fmtD(qtlToMt(dispQ))+' MT)</span><span>'+pc+'%</span></div>'
     +'<div class="pb"><div class="pf" style="width:'+pc+'%;background:'+pCol+'"></div></div>'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">'
     +'<span class="'+st.cls+'">'+st.lbl+'</span>'
@@ -643,12 +643,12 @@ function openSaudaDetail(sid){
     +'<div class="mt-sub">🤝 '+b.name+' &nbsp;·&nbsp; 📅 '+s.date+' &nbsp;·&nbsp; 📍 '+s.location+(s.oneTime?' &nbsp;·&nbsp; 🔔 One-Time':'')+'</div></div>'
     +'<button class="mx" onclick="closeModal()">✕</button></div>'
     +'<div class="mb">'
-    +(s.oneTime?'<div class="ot-warning">🔔 <strong>One-Time Delivery Sauda:</strong> Is saude mein reject ho jaane ke baad bhi quantity minus ho jaayegi — balance kam ho jaayega.</div>':'')
+    +(s.oneTime?'<div class="ot-warning">🔔 <strong>One-Time Delivery Sauda:</strong> Rejected qty will reduce balance.</div>':'')
     +(s.manualComplete?'<div style="background:var(--gbg);border:1px solid var(--gb);border-radius:7px;padding:8px 12px;font-size:12px;color:#166534;margin-bottom:12px">✅ <strong>Manual complete:</strong> Is saude ko deal band maana gaya hai — status complete, baki 0.</div>':'')
     +'<div class="fgrid4" style="margin-bottom:14px">'
     +'<div class="jst" style="padding:10px 12px"><div class="jsv" style="color:var(--blue);font-size:20px">₹'+fmt(s.rate)+'</div><div class="jsl">Rate / MT</div></div>'
     +'<div class="jst" style="padding:10px 12px"><div class="jsv" style="font-size:18px">'+fmtD(totQtl)+' Qtl</div><div class="jsl">Total Qty</div><div style="font-size:10px;color:var(--text3)">'+fmtD(s.qty)+' MT &nbsp;·&nbsp; ₹'+fmt(s.qty*s.rate)+'</div></div>'
-    +'<div class="jst" style="padding:10px 12px"><div class="jsv" style="color:#16a34a;font-size:18px">'+fmtD(dispQ)+' Qtl</div><div class="jsl">Bhuta ('+(s.oneTime?'Pass+Reject':'Pass Only')+')</div></div>'
+    +'<div class="jst" style="padding:10px 12px"><div class="jsv" style="color:#16a34a;font-size:18px">'+fmtD(dispQ)+' Qtl</div><div class="jsl">Deliver ('+(s.oneTime?'Pass+Reject':'Pass Only')+')</div></div>'
     +'<div class="jst" style="padding:10px 12px"><div class="jsv" style="color:'+pCol+';font-size:18px">'+(balQ<=0?'Done ✓':fmtD(balQ)+' Qtl')+'</div><div class="jsl">Balance Order</div></div>'
     +'</div>'
     +'<div style="margin-bottom:14px">'
@@ -729,7 +729,7 @@ function escAttr(s){
 }
 function dispatchAttachFieldsHtml(prefix,fromFirmVal){
   var v=escAttr(fromFirmVal);
-  return '<div class="fgrid"><div class="fg2"><label class="flbl">From Firm</label><input class="finp" id="'+prefix+'-fromfirm" value="'+v+'" placeholder="Jis firm se maal aa raha hai"></div></div>'
+  return '<div class="fgrid"><div class="fg2"><label class="flbl">From Firm</label><input class="finp" id="'+prefix+'-fromfirm" value="'+v+'" placeholder="From firm."></div></div>'
     +'<div class="fg2"><label class="flbl">Documents (PDF / Photo)</label>'
     +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">'
     +'<button type="button" class="btn btn-ghost" style="font-size:12px" onclick="pickDispAtt(\''+prefix+'\',\'doc\')">📁 File / PDF</button>'
@@ -738,7 +738,7 @@ function dispatchAttachFieldsHtml(prefix,fromFirmVal){
     +'<input type="file" id="'+prefix+'-file-doc" style="display:none" accept="image/*,.pdf,application/pdf" multiple onchange="onDispAttPicked(\''+prefix+'\',event)">'
     +'<input type="file" id="'+prefix+'-file-cam" style="display:none" accept="image/*" capture="environment" onchange="onDispAttPicked(\''+prefix+'\',event)">'
     +'<div id="'+prefix+'-att-list" style="font-size:12px;margin-top:4px"></div>'
-    +'<div style="font-size:10px;color:var(--text3);margin-top:4px">Cloud: Firebase Storage. Fail ho toh chhoti file local (base64) save.</div></div>';
+    +'<div style="font-size:10px;color:var(--text3);margin-top:4px">Cloud: Firebase Storage. If failed, save locally (base64).</div></div>';
 }
 var _dispAttPending={nd:[],df:[],ed:[]};
 var _edWorkingAtt=[];
@@ -962,7 +962,7 @@ function dispFormHtml(sid, backFn, saveFn, prefill){
     +'<div class="fg2"><label class="flbl">Bags</label>'
     +'<input type="number" class="finp" id="df-bags" value="'+(pf.bags||'')+'" placeholder="Bags count"></div>'
     +'</div>'
-    +'<div style="background:var(--gbg);border:1px solid var(--gb);border-radius:7px;padding:8px 12px;font-size:12px;margin-bottom:14px;color:var(--green)">ℹ 1 MT = 10 Quintal &nbsp;|&nbsp; Quintal ya MT mein se ek bharo, doosra khud bhar jaayega.</div>';
+    +'<div style="background:var(--gbg);border:1px solid var(--gb);border-radius:7px;padding:8px 12px;font-size:12px;margin-bottom:14px;color:var(--green)">ℹ 1 MT = 10 Quintal &nbsp;|&nbsp; Enter Quintal or MT</div>';
 }
 function syncQtlToMT(){
   var qtl=parseFloat(document.getElementById('df-qtl').value)||0;
@@ -1233,7 +1233,7 @@ function downloadCsvFile(filename, rows){
 }
 function fillBrokerFilter(){
   var sel=document.getElementById('sf-broker');var val=sel.value;
-  sel.innerHTML='<option value="">Sab Brokers</option>';
+  sel.innerHTML='<option value="">All Brokers</option>';
   DATA.brokers.forEach(function(b){sel.innerHTML+='<option value="'+b.id+'">'+b.name+'</option>';});
   sel.value=val;
 }
@@ -1284,7 +1284,7 @@ function fillDispatchFilters(){
   DATA.saude.forEach(function(s){ds.innerHTML+='<option value="'+s.id+'">'+saudaOptionText(s,true)+'</option>';});
   ds.value=dv;
   var db=document.getElementById('df-broker');var dbv=db.value;
-  db.innerHTML='<option value="">Sab Brokers</option>';
+  db.innerHTML='<option value="">All Brokers</option>';
   DATA.brokers.forEach(function(b){db.innerHTML+='<option value="'+b.id+'">'+b.name+'</option>';});
   db.value=dbv;
 }
@@ -1630,7 +1630,7 @@ function genReport(type){
         +'<td>'+(s.oneTime?'<span class="flag-badge flag-ot">One-Time</span>':'Normal')+'</td>'
         +'<td><span class="'+st.cls+'">'+st.lbl+'</span></td></tr>';
     }).join('');
-    out='<div class="tw"><div class="th2"><div class="ttl">📄 Sauda-wise Report</div><button class="btn btn-purple" onclick="openExportModal()">📥 Dispatch Export</button></div><div class="tsc"><table><thead><tr><th>Sauda No</th><th>Tarikh</th><th>Party</th><th>Broker</th><th>Rate</th><th>Total Qtl</th><th>Bhuta Qtl</th><th>Baki Qtl</th><th>Pending Value</th><th>Type</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+    out='<div class="tw"><div class="th2"><div class="ttl">📄 Sauda-wise Report</div><button class="btn btn-purple" onclick="openExportModal()">📥 Dispatch Export</button></div><div class="tsc"><table><thead><tr><th>Sauda No</th><th>Tarikh</th><th>Party</th><th>Broker</th><th>Rate</th><th>Total Qtl</th><th>Deliver Qtl</th><th>Baki Qtl</th><th>Pending Value</th><th>Type</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
   }else if(type==='party'){
     var rows=DATA.parties.map(function(p){
       var ps=DATA.saude.filter(function(s){return s.partyId===p.id;});
@@ -1641,7 +1641,7 @@ function genReport(type){
         +'<td style="color:#d97706;font-weight:700">'+fmtD(totQ-totD)+' Qtl</td>'
         +'<td style="font-family:Rajdhani,sans-serif;font-weight:700">₹'+fmt(ps.reduce(function(t,s){return t+s.qty*s.rate;},0))+'</td></tr>';
     }).join('');
-    out='<div class="tw"><div class="th2"><div class="ttl">👤 Party-wise Report</div></div><div class="tsc"><table><thead><tr><th>Party</th><th>City</th><th>Saude</th><th>Total Qtl</th><th>Bhuta</th><th>Pending</th><th>Total Value</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+    out='<div class="tw"><div class="th2"><div class="ttl">👤 Party-wise Report</div></div><div class="tsc"><table><thead><tr><th>Party</th><th>City</th><th>Saude</th><th>Total Qtl</th><th>Deliver</th><th>Pending</th><th>Total Value</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
   }else if(type==='broker'){
     var rows=DATA.brokers.map(function(b){
       var bs=DATA.saude.filter(function(s){return s.brokerId===b.id;});
@@ -1666,7 +1666,7 @@ function genReport(type){
           +'<td><span class="'+st.cls+'">'+st.lbl+'</span></td>'
           +'<td><button class="btn btn-blue" style="padding:4px 10px;font-size:11px" onclick="openSaudaDetail(\''+s.id+'\')">Detail →</button></td></tr>';
       }).join('');
-      out='<div class="tw"><div class="th2"><div class="ttl">⏳ Pending Orders</div></div><div class="tsc"><table><thead><tr><th>Sauda</th><th>Party</th><th>Broker</th><th>Rate</th><th>Total</th><th>Bhuta</th><th>Baki</th><th>Pending Value</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+      out='<div class="tw"><div class="th2"><div class="ttl">⏳ Pending Orders</div></div><div class="tsc"><table><thead><tr><th>Sauda</th><th>Party</th><th>Broker</th><th>Rate</th><th>Total</th><th>Deliver</th><th>Baki</th><th>Pending Value</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
     }
   }
   document.getElementById('report-out').innerHTML=out;
@@ -1701,8 +1701,8 @@ function openExportModal(){
     +'<div class="sec-title">🔽 Group By / Sort By</div>'
     +'<div class="fgrid3" style="margin-bottom:14px">'
     +'<div class="fg2"><label class="flbl">Group By</label><select class="finp" id="ex-group"><option value="">Koi Group Nahi</option><option value="sauda">Sauda-wise</option><option value="broker">Broker-wise</option><option value="rate">Rate-wise</option><option value="party">Party-wise</option></select></div>'
-    +'<div class="fg2"><label class="flbl">Status Filter</label><select class="finp" id="ex-status"><option value="">Sab Status</option><option value="pass">Pass Only</option><option value="reject">Reject Only</option><option value="pending">Pending Only</option></select></div>'
-    +'<div class="fg2"><label class="flbl">Broker Filter</label><select class="finp" id="ex-broker"><option value="">Sab Brokers</option>'
+    +'<div class="fg2"><label class="flbl">Status Filter</label><select class="finp" id="ex-status"><option value="">All Status</option><option value="pass">Pass Only</option><option value="reject">Reject Only</option><option value="pending">Pending Only</option></select></div>'
+    +'<div class="fg2"><label class="flbl">Broker Filter</label><select class="finp" id="ex-broker"><option value="">All Brokers</option>'
     +DATA.brokers.map(function(b){return '<option value="'+b.id+'">'+b.name+'</option>';}).join('')+'</select></div>'
     +'</div>'
     +'<div class="sec-title">✅ Fields Select Karo (Jo export karne hain)</div>'
